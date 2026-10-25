@@ -1,0 +1,65 @@
+{
+ "meta": {
+  "trace_dir": "C:\\Users\\30369\\AppData\\Roaming\\VidInsight\\traces",
+  "note": "成功率/延迟/成本来自 T4 轨迹聚合；检索表来自 eval_results.json（bge-zh, 40 评测集）"
+ },
+ "agent_pipeline": {
+  "requests": 1,
+  "status_counts": {
+   "forced_summary": 1
+  },
+  "success_rate": 1.0,
+  "latency_ms": {
+   "avg": 21425.0,
+   "p50": 21425.0,
+   "p95": 21425.0
+  },
+  "tokens": {
+   "prompt_avg": 95025.0,
+   "completion_avg": 950.0
+  },
+  "cost_cny_per_request_avg": 0.19765,
+  "rounds_avg": 5.0,
+  "price_cny_per_1m": {
+   "prompt": 2.0,
+   "completion": 8.0
+  }
+ },
+ "retrieval_250": {
+  "meta": {
+   "corpus": "6 篇去重视频笔记（4 妙界按摩仪测评 + 2 CS2 分辨率事件）",
+   "queries": 40,
+   "embedding": "BAAI/bge-small-zh-v1.5 (本地)",
+   "reranker": "bge-reranker-v2-m3 (local, load 0.8s)",
+   "relevance": "region 级二值（markdown: 同 section；transcript: 时间窗重叠>1s）",
+   "date": "2026-09-15 05:29"
+  },
+  "chunk_size": 250,
+  "strategies": {
+   "vector": {
+    "recall@5": 0.3458,
+    "mrr": 0.4547,
+    "ndcg@10": 0.37,
+    "avg_latency_s": 0.021
+   },
+   "bm25": {
+    "recall@5": 0.4083,
+    "mrr": 0.582,
+    "ndcg@10": 0.4478,
+    "avg_latency_s": 0.002
+   },
+   "hybrid_rrf": {
+    "recall@5": 0.4167,
+    "mrr": 0.5348,
+    "ndcg@10": 0.4332,
+    "avg_latency_s": 0.023
+   },
+   "hybrid_rerank": {
+    "recall@5": 0.4667,
+    "mrr": 0.6925,
+    "ndcg@10": 0.4935,
+    "avg_latency_s": 18.257
+   }
+  }
+ }
+}

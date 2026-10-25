@@ -1,0 +1,1364 @@
+{
+  "markdown": "> 来源链接：https://www.bilibili.com/video/BV1P4th6PE6B?spm\n\n# 内容洞察报告：CS2的分辨率BUG ( z4kr monesy zywoo)\n\n## 1. 视频主题 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)\n\n本视频围绕 **CS2 分辨率设置引发的公平性问题** 展开，核心讨论点包括：\n\n- 不同分辨率（4:3、16:9、超宽屏）下阴影渲染距离不一致，导致部分玩家能提前获取敌人位置信息\n- 多个未被 Valve 修复的漏洞（HUD 显示敌人、蓝色门穿模、烟雾后透视、低分辨率下可见角色穿越）\n- 分辨率选择会直接影响竞技优势，形成“不公平竞争”环境\n\n视频试图解决的运营/消费问题是：**帮助玩家理解分辨率与竞技公平性之间的关系，同时向 Valve 施压要求修复漏洞。**\n\n## 2. 产品/品牌卖点 [原片 @ 00:20](https://www.bilibili.com/video/BV1P4th6PE6B&t=20)\n\n本视频并非商业化推广，但隐含以下“产品层面”的信息点：\n\n| 卖点/信息点 | 说明 |\n|---|---|\n| **高分辨率优势** | 超宽屏与高分辨率下，阴影渲染距离更远，可提前发现敌人 |\n| **低分辨率优势** | 1280×640 以下分辨率可看到角色穿越墙壁的动画 |\n| **阴影质量设置优化** | 将阴影质量调至中等可避免弹片数值刷屏问题 |\n| **控制台命令** | 提供具体命令解决帧率与弹片问题（未展开具体指令） |\n\n核心立场：**分辨率不应成为影响竞技公平性的变量，Valve 应统一修复。**\n\n## 3. 目标人群 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)\n\n**根据内容推断**，本视频主要面向：\n\n- **CS2 核心玩家**：尤其是关注竞技公平性的中高段位玩家（如上述 z4kr、monesy、zywoo 等职业选手的观众）\n- **职业选手与半职业选手**：视频提到的视角和场景均为比赛地图（如新卡西、宫殿点位），说明目标人群是认真对待排位/比赛的玩家\n- **硬件发烧友**：关注分辨率、渲染距离、阴影质量等画质参数对游戏表现的影响\n- **内容创作者/攻略研究者**：希望通过画面设置获取对局优势的玩家\n\n---\n\n## 4. 用户痛点 [原片 @ 00:30](https://www.bilibili.com/video/BV1P4th6PE6B&t=30)\n\n视频反复强调以下痛点：\n\n1. **不公平的信息差**：高分辨率玩家能看到阴影，低分辨率玩家看不到；反之亦然 → 同样的操作、同样的位置，胜负取决于“分辨率运气”\n2. **漏洞长期未修复**：HUD 显示敌人、蓝色门穿模、烟雾透视等问题持续一个多月未处理，玩家怨气积累\n3. **两难选择**：提高分辨率获得阴影优势，但失去低分辨率下的“角色穿越可见”优势；没有“全能最优解”\n4. **设置复杂**：需要手动调整阴影质量、分辨率比例，甚至使用控制台命令才能规避部分问题\n5. **信任危机**：玩家对 Valve 的修复速度失去信心，视频创作者表示“聊到厌倦了”\n\n---\n\n## 5. 脚本结构 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)\n\n| 阶段 | 时间区间 | 内容 |\n|---|---|---|\n| **开场钩子** | 00:00–00:06 | 用社区争议 + 具体片段切入，制造悬念（“就因为这个片段”） |\n| **问题引入** | 00:06–00:26 | 展示角度切换、影子出现的奇怪现象，抛出“分辨率导致不公平”的核心论点 |\n| **漏洞列举** | 00:29–01:16 | 依次展示 HUD 显示敌人、蓝色门穿模、烟雾透视三个漏洞，强调“Valve 需立即修复” |\n| **核心论证** | 01:17–02:10 | 对照测试：同一场景下不同分辨率（原生 vs 4:3 vs 超宽）的阴影渲染对比 |\n| **场景化验证** | 02:19–03:20 | 在不同地图点位（新卡西、户外场景）展示分辨率带来的实际击杀优势 |\n| **反向论证** | 03:21–04:10 | 低分辨率在“宫殿”点位的独特优势（可见角色穿越），说明问题不是单向的 |\n| **附加问题** | 04:14–04:45 | 补充控制台弹片数值刷屏问题，给出缓解方案 |\n| **收尾呼吁** | 04:47–05:20 | 总结立场（应修复所有问题），表达“厌倦讨论”的个人情绪，号召订阅 |\n\n---\n\n## 6. 高频话术 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)\n\n可复用的话术与表达套路：\n\n- **悬念式开头**：“就因为这个片段”“不可能”——制造好奇感\n- **对比演示句式**：“在原生分辨率下……但在超宽分辨率下……”——通过反差强化论点\n- **情绪化表达**：“非常令人沮丧”“这太疯狂了”“我有点厌倦了”——拉近与玩家距离，表达共鸣\n- **结论式金句**：“分辨率能带来显著优势，尤其在阴影细节方面”——高度概括，便于传播\n- **行动号召**：“希望你喜欢视频并订阅频道”——标准C端收尾\n\n---\n\n## 7. 可参考选题 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)\n\n适合运营团队参考的短视频选题方向：\n\n1. **“CS2 分辨率到底怎么选？不同比例下的实际画面对比”** —— 教学/攻略类\n2. **“Valve 一个月没修的 3 个游戏漏洞，你知道吗？”** —— 热点吐槽类\n3. **“4:3 vs 16:9 vs 超宽屏，哪个最适合上分？”** —— 数据分析类\n4. **“为什么你总被提前枪打死？可能是阴影渲染距离的锅”** —— 归因揭秘类\n5. **“职业选手用什么分辨率？z4kr/monesy/zywoo 的设置解析”** —— 选手模仿类\n\n---\n\n## 8. 运营建议 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)\n\n- **追热点节奏**：视频中提到的“社区争议”是一个天然热点入口，运营方应紧跟社区讨论趋势（如 Reddit、B站评论区），及时产出同类内容\n- **用对比测试做内容资产**：这种“同场景不同设置”的对比测试形式有很高的复用价值，可系列化产出（如“画质对比”“外设对比”）\n- **强化“替你发声”定位**：视频中创作者表达“厌倦讨论”但依然制作视频的立场非常讨喜，运营账号可以沿用“我们一起吐槽+推动官方修复”的内容人设\n- **配合图文 FAQ 沉淀**：视频中提到的控制台指令、阴影质量设置等，宜同步输出图文版教程，拦截搜索流量\n\n---\n\n## 9. 风险与不可照搬内容 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)\n\n- **未验证的漏洞演示**：视频中展示的 HUD 显示敌人、烟雾透视等漏洞可能在后续版本中被修复 → 内容时效性强，不适合长期置顶\n- **可能被认定为“利用漏洞”**：若运营账号直接推广“低分辨率看穿墙壁”等操作，可能违反游戏公平性政策，需谨慎表述（建议表述为“讨论问题”而非“教学利用”）\n- **技术参数依赖具体环境**：视频中的阴影渲染差异与显卡驱动、显示器参数相关，不同设备测试结果可能不一致，“照搬结论”可能导致误导\n- **标题借用职业选手名字**：视频标题包含 z4kr、monesy、zywoo 等选手名，若未获得授权或实际使用其素材，存在版权与名誉权风险\n\n---\n\n## 10. 洞察总结 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)\n\n1. **“设置差异=隐形优势”是最有传播力的内容母题**：玩家天然关心“如何不花钱变强”，但更关心“为什么我输给了设置而不是实力”，这类内容情绪共鸣强、评论区活跃度高\n2. **对比测试结构是游戏内容的高效模板**：同一场景下不同配置的并排演示，画面冲击力强，逻辑清晰，适合系列化运营\n3. **“长期未修复”本身就是流量关键词**：创作者反复强调“一个多月了”“厌倦了”，说明玩家对官方不作为的积怨是内容传播的重要燃料\n4. **低分辨率“反向优势”是差异化内容点**：大多数内容只谈“高分辨率优势”，本视频反向指出“低分辨率也能看到穿越动画”，这种双向论证提升了内容的专业感和可信度\n5. **运营周报启示**：下周可重点布局“游戏设置公平性问题”选题方向，同时关注 Valve 是否发布更新补丁，若发布可快速产出“修复对比”的后续追踪内容",
+  "transcript": {
+    "language": "ai-zh",
+    "full_text": "最近社区对选择哪种分辨率存在分歧 就因为这个片段 他不断变换越来越深的角度 这会让他可用的射击角度越来越少 就在那里操作 看到影子了吗影子 不可能 但在尝试更改分辨率前 有一些优势 只有4:3比例提供 以及Valve需要立即修复的某些漏洞 那我们就直接讨论这些 首先说这个漏洞 我几乎讨论了一个多月了 我觉得已经超过一个月了 可以看到HUD上的敌人 但你也能看到敌人 只要这样快速划动 不知为何手部会显现 我不知道为什么会这样发生 但我会修复这个 但HUD仍能看到敌人 这非常令人沮丧 如果你喜欢悄悄行动 务必不要触碰蓝色门 否则敌人会看到你位于上方小屋 存在这个漏洞 仍未被修复 可以看到烟雾后的景象 根据我的测试 这是唯一出现该行为的位置 现在最后讨论阴影与分辨率 现在可以看到 我能绘制所有阴影 我的渲染距离完全完美 所有六个阴影都很完美 我将分辨率改为4:3 现在三个阴影完全消失 是的 阴影取决于所选分辨率 但不仅限于69和4:3 假设我稍微后退 现在 其中一个阴影消失了 如果我把分辨率设为超宽 现在渲染距离增加 可以看到最后一个阴影 事实上我可以更后退一些 仍能看到阴影在消失前 这意味着我能获得大量强力角度 这里我能获取很多否则不会注意到的信息 这就是1:69比例 在我们的超宽屏和超高分辨率显示器上 这就是我要表达的内容 这些优势在不同场景中体现 假设你像这样抱着我 在超宽分辨率下能清晰看到阴影 但原生分辨率下无法看到 同样地 如果在原生分辨率下靠近这些盒子 能在这里看到清晰的阴影 但在伪造场景中 无法看到这些阴影 分辨率能带来显著优势 尤其在阴影细节方面 没错 让我们再举个例子 在虚幻场景中 你看不到 即使原生分辨率是689 但使用超宽分辨率时 你能看到 我又能看到阴影了 如果你在玩新卡西 这会再次给你优势 正如你所见对于三 我看不见任何东西 想象他在右侧外侧 他什么都看不见 没有阴影 但在这里超宽分辨率 我能看到阴影 对吧 这确实很有趣 假设 如果你想在户外 这会非常有帮助 但单纯提高分辨率并不总是好 以宫殿玩家为例 比如 当你以这个角度 能实际发现敌人 直接穿过这里并射击 可能在YouTube视频里没注意到 让我放大并放慢速度 如你所见 能看到人物移动 但如果你这样调整分辨率 就看不到人物穿过 这仅在1280×640以下有效 如果你的分辨率超过这个 你看不到那个人，这太疯狂了 所以你拥有更高分辨率的优势 现在你获得了更低分辨率的优势 假设你是一个宫殿玩家 你更可能选择这里 即使是十乘二四 是的 你什么都看不到 现在你需要考虑这个问题 这些并非唯一的问题 我收到一条短信 对方说他的鼠标在新区域感觉漂浮 但对我来说并不觉得漂浮 但仍有这个漏洞 所以说我直接过来这里 如果你打开控制台 你会被这些弹片数值轰炸 不是的 这不取决于你的分辨率 你必须将阴影质量调至中等 然后这个问题就消失了 如果你想节省帧率同时解决这个问题 则需要使用这个命令 所以就是这样 如果你在原生或超宽屏下游玩 你获得阴影优势 但如果你在当前位置玩宫殿 你看不到任何人穿越 无论如何 我觉得 应该修复所有这些问题 现在它们更加统一 不应该这样 我一直在讨论这些漏洞很久了 事实上我聊了太久以至于 我已经有点厌倦了 我不想再继续讨论了 但既然这个问题再次引起注意 我就谈谈它们并制作这个视频 希望你喜欢视频并订阅频道 如果你想观看更多内容",
+    "segments": [
+      {
+        "start": 0.2,
+        "end": 4.56,
+        "text": "最近社区对选择哪种分辨率存在分歧"
+      },
+      {
+        "start": 4.56,
+        "end": 6.58,
+        "text": "就因为这个片段"
+      },
+      {
+        "start": 6.58,
+        "end": 9.1,
+        "text": "他不断变换越来越深的角度"
+      },
+      {
+        "start": 9.1,
+        "end": 12.28,
+        "text": "这会让他可用的射击角度越来越少"
+      },
+      {
+        "start": 12.28,
+        "end": 13.4,
+        "text": "就在那里操作"
+      },
+      {
+        "start": 13.4,
+        "end": 15.14,
+        "text": "看到影子了吗影子"
+      },
+      {
+        "start": 15.14,
+        "end": 15.87,
+        "text": "不可能"
+      },
+      {
+        "start": 15.87,
+        "end": 20.689,
+        "text": "但在尝试更改分辨率前"
+      },
+      {
+        "start": 20.689,
+        "end": 22.469,
+        "text": "有一些优势"
+      },
+      {
+        "start": 22.469,
+        "end": 24.15,
+        "text": "只有4:3比例提供"
+      },
+      {
+        "start": 24.15,
+        "end": 27.39,
+        "text": "以及Valve需要立即修复的某些漏洞"
+      },
+      {
+        "start": 27.39,
+        "end": 29.63,
+        "text": "那我们就直接讨论这些"
+      },
+      {
+        "start": 29.63,
+        "end": 30.75,
+        "text": "首先说这个漏洞"
+      },
+      {
+        "start": 30.75,
+        "end": 34.43,
+        "text": "我几乎讨论了一个多月了"
+      },
+      {
+        "start": 34.43,
+        "end": 36.38,
+        "text": "我觉得已经超过一个月了"
+      },
+      {
+        "start": 36.38,
+        "end": 38.22,
+        "text": "可以看到HUD上的敌人"
+      },
+      {
+        "start": 38.22,
+        "end": 40.28,
+        "text": "但你也能看到敌人"
+      },
+      {
+        "start": 40.28,
+        "end": 41.46,
+        "text": "只要这样快速划动"
+      },
+      {
+        "start": 41.46,
+        "end": 43.81,
+        "text": "不知为何手部会显现"
+      },
+      {
+        "start": 43.81,
+        "end": 47.51,
+        "text": "我不知道为什么会这样发生"
+      },
+      {
+        "start": 47.51,
+        "end": 49.07,
+        "text": "但我会修复这个"
+      },
+      {
+        "start": 49.07,
+        "end": 51.75,
+        "text": "但HUD仍能看到敌人"
+      },
+      {
+        "start": 51.75,
+        "end": 52.93,
+        "text": "这非常令人沮丧"
+      },
+      {
+        "start": 52.93,
+        "end": 55.09,
+        "text": "如果你喜欢悄悄行动"
+      },
+      {
+        "start": 55.09,
+        "end": 57.25,
+        "text": "务必不要触碰蓝色门"
+      },
+      {
+        "start": 57.25,
+        "end": 60.92,
+        "text": "否则敌人会看到你位于上方小屋"
+      },
+      {
+        "start": 60.92,
+        "end": 62.54,
+        "text": "存在这个漏洞"
+      },
+      {
+        "start": 62.54,
+        "end": 63.94,
+        "text": "仍未被修复"
+      },
+      {
+        "start": 63.94,
+        "end": 67.5,
+        "text": "可以看到烟雾后的景象"
+      },
+      {
+        "start": 71.7,
+        "end": 73.34,
+        "text": "根据我的测试"
+      },
+      {
+        "start": 73.34,
+        "end": 77.74,
+        "text": "这是唯一出现该行为的位置"
+      },
+      {
+        "start": 77.74,
+        "end": 80.88,
+        "text": "现在最后讨论阴影与分辨率"
+      },
+      {
+        "start": 80.88,
+        "end": 82.56,
+        "text": "现在可以看到"
+      },
+      {
+        "start": 82.56,
+        "end": 84.52,
+        "text": "我能绘制所有阴影"
+      },
+      {
+        "start": 84.52,
+        "end": 86.76,
+        "text": "我的渲染距离完全完美"
+      },
+      {
+        "start": 86.76,
+        "end": 88.92,
+        "text": "所有六个阴影都很完美"
+      },
+      {
+        "start": 88.92,
+        "end": 90.88,
+        "text": "我将分辨率改为4:3"
+      },
+      {
+        "start": 90.88,
+        "end": 95.64,
+        "text": "现在三个阴影完全消失"
+      },
+      {
+        "start": 95.64,
+        "end": 96.34,
+        "text": "是的"
+      },
+      {
+        "start": 96.34,
+        "end": 99.96,
+        "text": "阴影取决于所选分辨率"
+      },
+      {
+        "start": 99.96,
+        "end": 102.98,
+        "text": "但不仅限于69和4:3"
+      },
+      {
+        "start": 102.98,
+        "end": 105.32,
+        "text": "假设我稍微后退"
+      },
+      {
+        "start": 105.32,
+        "end": 105.8,
+        "text": "现在"
+      },
+      {
+        "start": 105.8,
+        "end": 107.14,
+        "text": "其中一个阴影消失了"
+      },
+      {
+        "start": 107.14,
+        "end": 111.48,
+        "text": "如果我把分辨率设为超宽"
+      },
+      {
+        "start": 111.48,
+        "end": 113.84,
+        "text": "现在渲染距离增加"
+      },
+      {
+        "start": 113.84,
+        "end": 115.4,
+        "text": "可以看到最后一个阴影"
+      },
+      {
+        "start": 115.4,
+        "end": 118.83,
+        "text": "事实上我可以更后退一些"
+      },
+      {
+        "start": 118.83,
+        "end": 122.26,
+        "text": "仍能看到阴影在消失前"
+      },
+      {
+        "start": 122.26,
+        "end": 126.6,
+        "text": "这意味着我能获得大量强力角度"
+      },
+      {
+        "start": 126.6,
+        "end": 130.699,
+        "text": "这里我能获取很多否则不会注意到的信息"
+      },
+      {
+        "start": 130.699,
+        "end": 132.199,
+        "text": "这就是1:69比例"
+      },
+      {
+        "start": 132.199,
+        "end": 135.919,
+        "text": "在我们的超宽屏和超高分辨率显示器上"
+      },
+      {
+        "start": 135.919,
+        "end": 138.579,
+        "text": "这就是我要表达的内容"
+      },
+      {
+        "start": 139.37,
+        "end": 142.85,
+        "text": "这些优势在不同场景中体现"
+      },
+      {
+        "start": 142.85,
+        "end": 145.73,
+        "text": "假设你像这样抱着我"
+      },
+      {
+        "start": 145.73,
+        "end": 148.11,
+        "text": "在超宽分辨率下能清晰看到阴影"
+      },
+      {
+        "start": 148.11,
+        "end": 151.13,
+        "text": "但原生分辨率下无法看到"
+      },
+      {
+        "start": 151.13,
+        "end": 152.07,
+        "text": "同样地"
+      },
+      {
+        "start": 152.07,
+        "end": 156.01,
+        "text": "如果在原生分辨率下靠近这些盒子"
+      },
+      {
+        "start": 156.01,
+        "end": 158.11,
+        "text": "能在这里看到清晰的阴影"
+      },
+      {
+        "start": 158.11,
+        "end": 159.05,
+        "text": "但在伪造场景中"
+      },
+      {
+        "start": 159.05,
+        "end": 161.17,
+        "text": "无法看到这些阴影"
+      },
+      {
+        "start": 161.17,
+        "end": 164.03,
+        "text": "分辨率能带来显著优势"
+      },
+      {
+        "start": 164.03,
+        "end": 166.75,
+        "text": "尤其在阴影细节方面"
+      },
+      {
+        "start": 166.75,
+        "end": 167.41,
+        "text": "没错"
+      },
+      {
+        "start": 167.41,
+        "end": 169.65,
+        "text": "让我们再举个例子"
+      },
+      {
+        "start": 169.65,
+        "end": 170.74,
+        "text": "在虚幻场景中"
+      },
+      {
+        "start": 170.74,
+        "end": 171.62,
+        "text": "你看不到"
+      },
+      {
+        "start": 171.62,
+        "end": 174.22,
+        "text": "即使原生分辨率是689"
+      },
+      {
+        "start": 174.22,
+        "end": 176.76,
+        "text": "但使用超宽分辨率时"
+      },
+      {
+        "start": 176.76,
+        "end": 177.46,
+        "text": "你能看到"
+      },
+      {
+        "start": 177.46,
+        "end": 179.91,
+        "text": "我又能看到阴影了"
+      },
+      {
+        "start": 179.91,
+        "end": 181.5,
+        "text": "如果你在玩新卡西"
+      },
+      {
+        "start": 181.5,
+        "end": 183.18,
+        "text": "这会再次给你优势"
+      },
+      {
+        "start": 183.18,
+        "end": 184.34,
+        "text": "正如你所见对于三"
+      },
+      {
+        "start": 184.34,
+        "end": 185.52,
+        "text": "我看不见任何东西"
+      },
+      {
+        "start": 185.52,
+        "end": 188.2,
+        "text": "想象他在右侧外侧"
+      },
+      {
+        "start": 188.2,
+        "end": 189.3,
+        "text": "他什么都看不见"
+      },
+      {
+        "start": 189.3,
+        "end": 190.26,
+        "text": "没有阴影"
+      },
+      {
+        "start": 190.26,
+        "end": 192.78,
+        "text": "但在这里超宽分辨率"
+      },
+      {
+        "start": 192.78,
+        "end": 194.63,
+        "text": "我能看到阴影"
+      },
+      {
+        "start": 194.63,
+        "end": 195.43,
+        "text": "对吧"
+      },
+      {
+        "start": 195.43,
+        "end": 198.23,
+        "text": "这确实很有趣"
+      },
+      {
+        "start": 198.23,
+        "end": 198.75,
+        "text": "假设"
+      },
+      {
+        "start": 198.75,
+        "end": 200.05,
+        "text": "如果你想在户外"
+      },
+      {
+        "start": 200.05,
+        "end": 201.92,
+        "text": "这会非常有帮助"
+      },
+      {
+        "start": 201.92,
+        "end": 207.0,
+        "text": "但单纯提高分辨率并不总是好"
+      },
+      {
+        "start": 207.0,
+        "end": 208.54,
+        "text": "以宫殿玩家为例"
+      },
+      {
+        "start": 208.54,
+        "end": 209.26,
+        "text": "比如"
+      },
+      {
+        "start": 209.26,
+        "end": 210.58,
+        "text": "当你以这个角度"
+      },
+      {
+        "start": 210.58,
+        "end": 212.24,
+        "text": "能实际发现敌人"
+      },
+      {
+        "start": 212.24,
+        "end": 215.27,
+        "text": "直接穿过这里并射击"
+      },
+      {
+        "start": 215.27,
+        "end": 217.39,
+        "text": "可能在YouTube视频里没注意到"
+      },
+      {
+        "start": 217.39,
+        "end": 219.87,
+        "text": "让我放大并放慢速度"
+      },
+      {
+        "start": 219.87,
+        "end": 220.81,
+        "text": "如你所见"
+      },
+      {
+        "start": 220.81,
+        "end": 222.29,
+        "text": "能看到人物移动"
+      },
+      {
+        "start": 222.29,
+        "end": 225.57,
+        "text": "但如果你这样调整分辨率"
+      },
+      {
+        "start": 225.57,
+        "end": 227.99,
+        "text": "就看不到人物穿过"
+      },
+      {
+        "start": 227.99,
+        "end": 232.17,
+        "text": "这仅在1280×640以下有效"
+      },
+      {
+        "start": 232.17,
+        "end": 234.07,
+        "text": "如果你的分辨率超过这个"
+      },
+      {
+        "start": 234.07,
+        "end": 237.24,
+        "text": "你看不到那个人，这太疯狂了"
+      },
+      {
+        "start": 237.24,
+        "end": 240.31,
+        "text": "所以你拥有更高分辨率的优势"
+      },
+      {
+        "start": 240.31,
+        "end": 242.59,
+        "text": "现在你获得了更低分辨率的优势"
+      },
+      {
+        "start": 242.59,
+        "end": 244.4,
+        "text": "假设你是一个宫殿玩家"
+      },
+      {
+        "start": 244.4,
+        "end": 245.84,
+        "text": "你更可能选择这里"
+      },
+      {
+        "start": 245.84,
+        "end": 247.4,
+        "text": "即使是十乘二四"
+      },
+      {
+        "start": 247.4,
+        "end": 247.8,
+        "text": "是的"
+      },
+      {
+        "start": 247.8,
+        "end": 250.36,
+        "text": "你什么都看不到"
+      },
+      {
+        "start": 251.08,
+        "end": 254.18,
+        "text": "现在你需要考虑这个问题"
+      },
+      {
+        "start": 254.18,
+        "end": 256.03,
+        "text": "这些并非唯一的问题"
+      },
+      {
+        "start": 256.03,
+        "end": 257.91,
+        "text": "我收到一条短信"
+      },
+      {
+        "start": 257.91,
+        "end": 261.32,
+        "text": "对方说他的鼠标在新区域感觉漂浮"
+      },
+      {
+        "start": 261.32,
+        "end": 263.32,
+        "text": "但对我来说并不觉得漂浮"
+      },
+      {
+        "start": 263.32,
+        "end": 264.58,
+        "text": "但仍有这个漏洞"
+      },
+      {
+        "start": 264.58,
+        "end": 265.96,
+        "text": "所以说我直接过来这里"
+      },
+      {
+        "start": 265.96,
+        "end": 267.36,
+        "text": "如果你打开控制台"
+      },
+      {
+        "start": 267.36,
+        "end": 271.38,
+        "text": "你会被这些弹片数值轰炸"
+      },
+      {
+        "start": 271.38,
+        "end": 272.2,
+        "text": "不是的"
+      },
+      {
+        "start": 272.2,
+        "end": 273.72,
+        "text": "这不取决于你的分辨率"
+      },
+      {
+        "start": 273.72,
+        "end": 277.16,
+        "text": "你必须将阴影质量调至中等"
+      },
+      {
+        "start": 277.16,
+        "end": 279.13,
+        "text": "然后这个问题就消失了"
+      },
+      {
+        "start": 279.13,
+        "end": 283.61,
+        "text": "如果你想节省帧率同时解决这个问题"
+      },
+      {
+        "start": 283.61,
+        "end": 286.29,
+        "text": "则需要使用这个命令"
+      },
+      {
+        "start": 286.29,
+        "end": 287.11,
+        "text": "所以就是这样"
+      },
+      {
+        "start": 287.11,
+        "end": 288.89,
+        "text": "如果你在原生或超宽屏下游玩"
+      },
+      {
+        "start": 288.89,
+        "end": 290.37,
+        "text": "你获得阴影优势"
+      },
+      {
+        "start": 290.37,
+        "end": 292.87,
+        "text": "但如果你在当前位置玩宫殿"
+      },
+      {
+        "start": 292.87,
+        "end": 295.289,
+        "text": "你看不到任何人穿越"
+      },
+      {
+        "start": 295.289,
+        "end": 296.129,
+        "text": "无论如何"
+      },
+      {
+        "start": 296.129,
+        "end": 296.809,
+        "text": "我觉得"
+      },
+      {
+        "start": 296.809,
+        "end": 298.249,
+        "text": "应该修复所有这些问题"
+      },
+      {
+        "start": 298.249,
+        "end": 300.4,
+        "text": "现在它们更加统一"
+      },
+      {
+        "start": 300.4,
+        "end": 302.0,
+        "text": "不应该这样"
+      },
+      {
+        "start": 302.0,
+        "end": 305.19,
+        "text": "我一直在讨论这些漏洞很久了"
+      },
+      {
+        "start": 305.19,
+        "end": 307.69,
+        "text": "事实上我聊了太久以至于"
+      },
+      {
+        "start": 307.69,
+        "end": 310.18,
+        "text": "我已经有点厌倦了"
+      },
+      {
+        "start": 310.18,
+        "end": 311.98,
+        "text": "我不想再继续讨论了"
+      },
+      {
+        "start": 311.98,
+        "end": 315.13,
+        "text": "但既然这个问题再次引起注意"
+      },
+      {
+        "start": 315.13,
+        "end": 317.69,
+        "text": "我就谈谈它们并制作这个视频"
+      },
+      {
+        "start": 317.69,
+        "end": 320.75,
+        "text": "希望你喜欢视频并订阅频道"
+      },
+      {
+        "start": 320.75,
+        "end": 322.58,
+        "text": "如果你想观看更多内容"
+      }
+    ],
+    "raw": {
+      "source": "bilibili_player_api",
+      "bvid": "BV1P4th6PE6B",
+      "cid": 41472428724,
+      "lan": "ai-zh",
+      "ai_type": 1
+    }
+  },
+  "audio_meta": {
+    "file_path": "C:\\Users\\30369\\AppData\\Roaming\\CyberStomach\\data\\BV1P4th6PE6B.mp3",
+    "title": "CS2的分辨率BUG ( z4kr monesy zywoo)",
+    "duration": 322.734,
+    "cover_url": "http://i2.hdslb.com/bfs/archive/cb3c479bb6ee5b9d46338fed1692005dc891712b.jpg",
+    "platform": "bilibili",
+    "video_id": "BV1P4th6PE6B",
+    "raw_info": {
+      "uploader": "duckie__",
+      "uploader_id": "322114568",
+      "like_count": 242,
+      "tags": [
+        "第一视角",
+        "monesy",
+        "z4kr",
+        "CS2",
+        "zywoo"
+      ],
+      "thumbnail": "http://i2.hdslb.com/bfs/archive/cb3c479bb6ee5b9d46338fed1692005dc891712b.jpg",
+      "description": "https://www.youtube.com/watch?v=WKekLZVdYuw&amp;t=34s\nhttps://www.youtube.com/watch?v=WKekLZVdYuw&amp;t=34s",
+      "timestamp": 1788196465,
+      "view_count": 8601,
+      "comment_count": 33,
+      "id": "BV1P4th6PE6B",
+      "_old_archive_ids": [
+        "bilibili 117191236196880_part1"
+      ],
+      "title": "CS2的分辨率BUG ( z4kr monesy zywoo)",
+      "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-us,en;q=0.5",
+        "Sec-Fetch-Mode": "navigate",
+        "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+      },
+      "formats": [
+        {
+          "url": "https://upos-sz-mirrorhw.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30216.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&deadline=1788726352&mid=113999874&os=hwbv&og=hw&nbs=1&trid=6963ccb50b31406a93e14f449fee215u&uipk=5&oi=2028279937&platform=pc&gen=playurlv3&upsig=c1a4b24ec4352be47ffa73f61c1b7043&uparams=e,deadline,mid,os,og,nbs,trid,uipk,oi,platform,gen&bvc=vod&nettype=0&bw=66360&lrs=-1&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&orderid=0,3",
+          "ext": "m4a",
+          "acodec": "mp4a.40.2",
+          "vcodec": "none",
+          "tbr": 66.188,
+          "filesize": null,
+          "format_id": "30216",
+          "protocol": "https",
+          "audio_ext": "m4a",
+          "video_ext": "none",
+          "vbr": 0,
+          "abr": 66.188,
+          "resolution": "audio only",
+          "aspect_ratio": null,
+          "filesize_approx": 2670139,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          },
+          "format": "30216 - audio only"
+        },
+        {
+          "url": "https://xy223x94x121x155xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-30232.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=89148&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=cos&oi=2028279937&orderid=0%2C3&os=cosbv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=3f3798&traceid=trVTfsdyzoeZiz_0_e_N&uipk=5&uparams=e%2Cplatform%2Cdeadline%2Ctrid%2Cmid%2Cuipk%2Cos%2Cog%2Cnbs%2Coi%2Cgen&upsig=cc8f25df621e9271b6f5e2b2e0316a3c",
+          "ext": "m4a",
+          "acodec": "mp4a.40.2",
+          "vcodec": "none",
+          "tbr": 88.925,
+          "filesize": null,
+          "format_id": "30232",
+          "protocol": "https",
+          "audio_ext": "m4a",
+          "video_ext": "none",
+          "vbr": 0,
+          "abr": 88.925,
+          "resolution": "audio only",
+          "aspect_ratio": null,
+          "filesize_approx": 3587390,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          },
+          "format": "30232 - audio only"
+        },
+        {
+          "url": "https://xy61x164x142x20xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-30280.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=142450&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=hw&oi=2028279937&orderid=0%2C3&os=cosbv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=f5cfab&traceid=trAhbrhRlsBmJO_0_e_N&uipk=5&uparams=e%2Cnbs%2Cmid%2Cplatform%2Cdeadline%2Ctrid%2Cuipk%2Coi%2Cgen%2Cos%2Cog&upsig=1500979c6dad86ae1de5870de93c1fab",
+          "ext": "m4a",
+          "acodec": "mp4a.40.2",
+          "vcodec": "none",
+          "tbr": 142.105,
+          "filesize": null,
+          "format_id": "30280",
+          "protocol": "https",
+          "audio_ext": "m4a",
+          "video_ext": "none",
+          "vbr": 0,
+          "abr": 142.105,
+          "resolution": "audio only",
+          "aspect_ratio": null,
+          "filesize_approx": 5732764,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          },
+          "format": "30280 - audio only"
+        },
+        {
+          "url": "https://upos-sz-mirrorcoso1.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30016.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&trid=6963ccb50b31406a93e14f449fee215u&mid=113999874&deadline=1788726352&gen=playurlv3&nbs=1&uipk=5&oi=2028279937&platform=pc&os=coso1bv&og=cos&upsig=5d6fad841170f1b202486c7ebb4eadbc&uparams=e,trid,mid,deadline,gen,nbs,uipk,oi,platform,os,og&bvc=vod&nettype=0&bw=278634&lrs=-1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&agrr=1&orderid=0,3",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 640,
+          "height": 360,
+          "vcodec": "avc1.640033",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 277.98,
+          "filesize": null,
+          "quality": 16,
+          "format_id": "30016",
+          "format": "360P 流畅",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 277.98,
+          "resolution": "640x360",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 11214199,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirrorcos.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30011.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&oi=2028279937&nbs=1&trid=6963ccb50b31406a93e14f449fee215u&gen=playurlv3&os=cosbv&platform=pc&deadline=1788726352&mid=113999874&og=hw&uipk=5&upsig=9a56df85861fdc091b4514e060edfb42&uparams=e,oi,nbs,trid,gen,os,platform,deadline,mid,og,uipk&bvc=vod&nettype=0&bw=167596&lrs=-1&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&orderid=0,3",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 640,
+          "height": 360,
+          "vcodec": "hvc1.1.6.L120.90",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 167.195,
+          "filesize": null,
+          "quality": 16,
+          "format_id": "30011",
+          "format": "360P 流畅",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 167.195,
+          "resolution": "640x360",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 6744938,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirror08c.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-100022.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&mid=113999874&uipk=5&oi=2028279937&deadline=1788726352&nbs=1&trid=6963ccb50b31406a93e14f449fee215u&platform=pc&gen=playurlv3&os=08cbv&og=hw&upsig=2a0f8d3a1edbad11a7666837773deb2c&uparams=e,mid,uipk,oi,deadline,nbs,trid,platform,gen,os,og&bvc=vod&nettype=0&bw=141448&lrs=-1&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&dl=0&orderid=0,3",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 640,
+          "height": 360,
+          "vcodec": "av01.0.08M.08.0.110.01.01.01.0",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 141.106,
+          "filesize": null,
+          "quality": 16,
+          "format_id": "100022",
+          "format": "360P 流畅",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 141.106,
+          "resolution": "640x360",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 5692462,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://xy120x240x155x109xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-30032.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=420513&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=hw&oi=2028279937&orderid=0%2C3&os=cosbv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=8c2983&traceid=trMhzxQqgmHrwE_0_e_N&uipk=5&uparams=e%2Cnbs%2Ctrid%2Cdeadline%2Cgen%2Cog%2Cmid%2Cuipk%2Coi%2Cplatform%2Cos&upsig=189637b8afa8c96c5cc06e23df1609d9",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 852,
+          "height": 480,
+          "vcodec": "avc1.640033",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 419.538,
+          "filesize": null,
+          "quality": 32,
+          "format_id": "30032",
+          "format": "480P 标清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 419.538,
+          "resolution": "852x480",
+          "aspect_ratio": 1.77,
+          "filesize_approx": 16924897,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirror08c.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30033.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&og=hw&mid=113999874&uipk=5&oi=2028279937&trid=6963ccb50b31406a93e14f449fee215u&platform=pc&deadline=1788726352&nbs=1&gen=playurlv3&os=08cbv&upsig=a5663c68c706ff58d78161c5460414dc&uparams=e,og,mid,uipk,oi,trid,platform,deadline,nbs,gen,os&bvc=vod&nettype=0&bw=244649&lrs=-1&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&orderid=0,3",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 852,
+          "height": 480,
+          "vcodec": "hvc1.1.6.L120.90",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 244.073,
+          "filesize": null,
+          "quality": 32,
+          "format_id": "30033",
+          "format": "480P 标清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 244.073,
+          "resolution": "852x480",
+          "aspect_ratio": 1.77,
+          "filesize_approx": 9846331,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://xy115x231x41x10xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-100023.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=204108&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=hw&oi=2028279937&orderid=0%2C3&os=zosbv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=346bf0&traceid=trNvaefBiFmuNF_0_e_N&uipk=5&uparams=e%2Cuipk%2Cplatform%2Cos%2Cog%2Cnbs%2Cmid%2Coi%2Cdeadline%2Cgen%2Ctrid&upsig=2aa56cac9a1abc19310309242d1fd592",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 852,
+          "height": 480,
+          "vcodec": "av01.0.08M.08.0.110.01.01.01.0",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 203.624,
+          "filesize": null,
+          "quality": 32,
+          "format_id": "100023",
+          "format": "480P 标清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 203.624,
+          "resolution": "852x480",
+          "aspect_ratio": 1.77,
+          "filesize_approx": 8214548,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirrorcos.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30064.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&mid=113999874&nbs=1&og=cos&trid=6963ccb50b31406a93e14f449fee215u&uipk=5&oi=2028279937&platform=pc&deadline=1788726352&gen=playurlv3&os=cosbv&upsig=58f68bf2ce8bbc663de8249c0cd80439&uparams=e,mid,nbs,og,trid,uipk,oi,platform,deadline,gen,os&bvc=vod&nettype=0&bw=829240&lrs=-1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&agrr=1&orderid=0,3",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 1280,
+          "height": 720,
+          "vcodec": "avc1.640033",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 827.336,
+          "filesize": null,
+          "quality": 64,
+          "format_id": "30064",
+          "format": "720P 准高清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 827.336,
+          "resolution": "1280x720",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 33376182,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirrorcos.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30066.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&trid=6963ccb50b31406a93e14f449fee215u&oi=2028279937&platform=pc&gen=playurlv3&mid=113999874&uipk=5&deadline=1788726352&os=cosbv&og=cos&nbs=1&upsig=2df4f269727adb802257ccaf53f8bdeb&uparams=e,trid,oi,platform,gen,mid,uipk,deadline,os,og,nbs&bvc=vod&nettype=0&bw=322288&lrs=-1&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&dl=0&orderid=0,3",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 1280,
+          "height": 720,
+          "vcodec": "hvc1.1.6.L120.90",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 321.535,
+          "filesize": null,
+          "quality": 64,
+          "format_id": "30066",
+          "format": "720P 准高清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 321.535,
+          "resolution": "1280x720",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 12971284,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirror08c.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-100024.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&og=hw&trid=6963ccb50b31406a93e14f449fee215u&uipk=5&oi=2028279937&deadline=1788726352&os=08cbv&nbs=1&mid=113999874&platform=pc&gen=playurlv3&upsig=1f5e0b6f4970a07fac6143e3972d786a&uparams=e,og,trid,uipk,oi,deadline,os,nbs,mid,platform,gen&bvc=vod&nettype=0&bw=263265&lrs=-1&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&orderid=0,3",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 1280,
+          "height": 720,
+          "vcodec": "av01.0.08M.08.0.110.01.01.01.0",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 262.646,
+          "filesize": null,
+          "quality": 64,
+          "format_id": "100024",
+          "format": "720P 准高清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 262.646,
+          "resolution": "1280x720",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 10595599,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://xy116x196x140x13xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-30080.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=1874314&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=cos&oi=2028279937&orderid=0%2C3&os=coso1bv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=c4044b&traceid=trOPNkNUgKtmiu_0_e_N&uipk=5&uparams=e%2Coi%2Cplatform%2Cdeadline%2Cnbs%2Ctrid%2Cmid%2Cgen%2Cos%2Cuipk%2Cog&upsig=8171d13362fd91ffaf773dabc6864320",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 1920,
+          "height": 1080,
+          "vcodec": "avc1.640033",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 1870.035,
+          "filesize": null,
+          "quality": 80,
+          "format_id": "30080",
+          "format": "1080P 高清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 1870.035,
+          "resolution": "1920x1080",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 75440484,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirrorcoso1.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30077.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&gen=playurlv3&os=coso1bv&og=cos&uipk=5&oi=2028279937&platform=pc&trid=6963ccb50b31406a93e14f449fee215u&mid=113999874&deadline=1788726352&upsig=576167de9b7790854e57e7526b60c191&uparams=e,nbs,gen,os,og,uipk,oi,platform,trid,mid,deadline&bvc=vod&nettype=0&bw=947769&lrs=-1&build=0&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&orderid=0,3",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 1920,
+          "height": 1080,
+          "vcodec": "hvc1.1.6.L150.90",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 945.595,
+          "filesize": null,
+          "quality": 80,
+          "format_id": "30077",
+          "format": "1080P 高清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 945.595,
+          "resolution": "1920x1080",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 38146957,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://xy183x232x159x51xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-100026.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=775043&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=hw&oi=2028279937&orderid=0%2C3&os=08hbv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=42dcb3&traceid=trTOwrfjiUgjUl_0_e_N&uipk=5&uparams=e%2Cos%2Cuipk%2Coi%2Cog%2Cnbs%2Ctrid%2Cmid%2Cplatform%2Cdeadline%2Cgen&upsig=f12f16a892bcf699acc246a0f9024f13",
+          "ext": "mp4",
+          "fps": 30.0,
+          "width": 1920,
+          "height": 1080,
+          "vcodec": "av01.0.08M.08.0.110.01.01.01.0",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 773.262,
+          "filesize": null,
+          "quality": 80,
+          "format_id": "100026",
+          "format": "1080P 高清",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 773.262,
+          "resolution": "1920x1080",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 31194742,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirror08h.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30116.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&trid=6963ccb50b31406a93e14f449fee215u&os=08hbv&mid=113999874&uipk=5&oi=2028279937&platform=pc&deadline=1788726352&nbs=1&gen=playurlv3&og=hw&upsig=90d20a88fcfc39b524e0c168d3bc5003&uparams=e,trid,os,mid,uipk,oi,platform,deadline,nbs,gen,og&bvc=vod&nettype=0&bw=3265969&lrs=-1&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&orderid=0,3",
+          "ext": "mp4",
+          "fps": 60.0,
+          "width": 1920,
+          "height": 1080,
+          "vcodec": "avc1.640033",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 3258.527,
+          "filesize": null,
+          "quality": 116,
+          "format_id": "30116",
+          "format": "1080P 60帧",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 3258.527,
+          "resolution": "1920x1080",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 131454681,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://upos-sz-mirrorbd.bilivideo.com/upgcxcode/24/87/41472428724/41472428724-1-30106.m4s?e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M=&nbs=1&og=hw&mid=113999874&uipk=5&oi=2028279937&platform=pc&trid=6963ccb50b31406a93e14f449fee215u&gen=playurlv3&os=bdbv&deadline=1788726352&upsig=46084deba30c2d192090c28b03a863bb&uparams=e,nbs,og,mid,uipk,oi,platform,trid,gen,os,deadline&bvc=vod&nettype=0&bw=1770158&lrs=-1&agrr=1&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&build=0&dl=0&f=u_0_0&qn_dyeid=f148e524aa30efc100166afe6a9db030&orderid=0,3",
+          "ext": "mp4",
+          "fps": 60.0,
+          "width": 1920,
+          "height": 1080,
+          "vcodec": "hvc1.1.6.L150.90",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 1766.115,
+          "filesize": null,
+          "quality": 116,
+          "format_id": "30106",
+          "format": "1080P 60帧",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 1766.115,
+          "resolution": "1920x1080",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 71248169,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        },
+        {
+          "url": "https://xy183x234x98x183xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-100028.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=1458579&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=hw&oi=2028279937&orderid=0%2C3&os=zosbv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=11572b&traceid=trHcwlLDrBgTBY_0_e_N&uipk=5&uparams=e%2Cuipk%2Cdeadline%2Cnbs%2Cmid%2Cgen%2Cos%2Cog%2Coi%2Cplatform%2Ctrid&upsig=82a1377453b8e0cd069970390b7d78ee",
+          "ext": "mp4",
+          "fps": 60.0,
+          "width": 1920,
+          "height": 1080,
+          "vcodec": "av01.0.09M.08.0.110.01.01.01.0",
+          "acodec": "none",
+          "dynamic_range": "SDR",
+          "tbr": 1455.245,
+          "filesize": null,
+          "quality": 116,
+          "format_id": "100028",
+          "format": "1080P 60帧",
+          "protocol": "https",
+          "video_ext": "mp4",
+          "audio_ext": "none",
+          "abr": 0,
+          "vbr": 1455.245,
+          "resolution": "1920x1080",
+          "aspect_ratio": 1.78,
+          "filesize_approx": 58707129,
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          }
+        }
+      ],
+      "duration": 322.734,
+      "chapters": null,
+      "subtitles": {},
+      "webpage_url": "https://www.bilibili.com/video/BV1P4th6PE6B?spm",
+      "original_url": "https://www.bilibili.com/video/BV1P4th6PE6B?spm",
+      "webpage_url_basename": "BV1P4th6PE6B",
+      "webpage_url_domain": "bilibili.com",
+      "extractor": "BiliBili",
+      "extractor_key": "BiliBili",
+      "playlist": null,
+      "playlist_index": null,
+      "thumbnails": [
+        {
+          "url": "http://i2.hdslb.com/bfs/archive/cb3c479bb6ee5b9d46338fed1692005dc891712b.jpg",
+          "id": "0"
+        }
+      ],
+      "display_id": "BV1P4th6PE6B",
+      "fulltitle": "CS2的分辨率BUG ( z4kr monesy zywoo)",
+      "duration_string": "5:22",
+      "upload_date": "20260831",
+      "release_year": null,
+      "requested_subtitles": null,
+      "_has_drm": null,
+      "epoch": 1788719152,
+      "requested_downloads": [
+        {
+          "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-us,en;q=0.5",
+            "Sec-Fetch-Mode": "navigate",
+            "Referer": "https://www.bilibili.com/video/BV1P4th6PE6B?spm"
+          },
+          "url": "https://xy61x164x142x20xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-30280.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=142450&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=hw&oi=2028279937&orderid=0%2C3&os=cosbv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=f5cfab&traceid=trAhbrhRlsBmJO_0_e_N&uipk=5&uparams=e%2Cnbs%2Cmid%2Cplatform%2Cdeadline%2Ctrid%2Cuipk%2Coi%2Cgen%2Cos%2Cog&upsig=1500979c6dad86ae1de5870de93c1fab",
+          "ext": "mp3",
+          "acodec": "mp4a.40.2",
+          "vcodec": "none",
+          "tbr": 142.105,
+          "format_id": "30280",
+          "protocol": "https",
+          "audio_ext": "m4a",
+          "video_ext": "none",
+          "vbr": 0,
+          "abr": 142.105,
+          "resolution": "audio only",
+          "filesize_approx": 5732764,
+          "format": "30280 - audio only",
+          "_filename": "C:\\Users\\30369\\AppData\\Roaming\\CyberStomach\\data\\BV1P4th6PE6B.m4a",
+          "filename": "C:\\Users\\30369\\AppData\\Roaming\\CyberStomach\\data\\BV1P4th6PE6B.m4a",
+          "__postprocessors": [],
+          "__real_download": true,
+          "__finaldir": "C:\\Users\\30369\\AppData\\Roaming\\CyberStomach\\data",
+          "filepath": "C:\\Users\\30369\\AppData\\Roaming\\CyberStomach\\data\\BV1P4th6PE6B.mp3",
+          "__write_download_archive": true
+        }
+      ],
+      "url": "https://xy61x164x142x20xy.mcdn.bilivideo.cn:8082/v1/resource/upgcxcode/24/87/41472428724/41472428724-1-30280.m4s?agrr=1&build=0&buvid=E0063487-3246-0C95-667B-0C205DD50C3541236infoc&bvc=vod&bw=142450&deadline=1788726352&dl=0&e=ig8euxZM2rNcNbdlhoNvNC8BqJIzNbfqXBvEqxTEto8BTrNvN0GvT90W5JZMkX_YN0MvXg8gNEV4NC8xNEV4N03eN0B5tZlqNxTEto8BTrNvNeZVuJ10Kj_g2UB02J0mN0B5tZlqNCNEto8BTrNvNC7MTX502C8f2jmMQJ6mqF2fka1mqx6gqj0eN0B599M%3D&f=u_0_0&gen=playurlv3&lrs=-1&mid=113999874&nbs=1&nettype=0&og=hw&oi=2028279937&orderid=0%2C3&os=cosbv&platform=pc&qn_dyeid=f148e524aa30efc100166afe6a9db030&sign=f5cfab&traceid=trAhbrhRlsBmJO_0_e_N&uipk=5&uparams=e%2Cnbs%2Cmid%2Cplatform%2Cdeadline%2Ctrid%2Cuipk%2Coi%2Cgen%2Cos%2Cog&upsig=1500979c6dad86ae1de5870de93c1fab",
+      "ext": "m4a",
+      "acodec": "mp4a.40.2",
+      "vcodec": "none",
+      "tbr": 142.105,
+      "filesize": null,
+      "format_id": "30280",
+      "protocol": "https",
+      "audio_ext": "m4a",
+      "video_ext": "none",
+      "vbr": 0,
+      "abr": 142.105,
+      "resolution": "audio only",
+      "aspect_ratio": null,
+      "filesize_approx": 5732764,
+      "format": "30280 - audio only"
+    },
+    "video_path": null
+  }
+}

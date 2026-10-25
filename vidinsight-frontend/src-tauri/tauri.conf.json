@@ -1,0 +1,48 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "VidInsight",
+  "version": "2.5.0",
+  "identifier": "com.no-professor.vidinsight",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:3015",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build -- --mode tauri"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "VidInsight / 灵悉",
+        "width": 1600,
+        "height": 1000,
+        "resizable": true,
+        "fullscreen": false,
+        "devtools": false,
+        "additionalBrowserArgs": "--proxy-server=direct:// --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "externalBin": [
+      "bin/VidInsightBackend/VidInsightBackend"
+    ],
+    "resources": {
+    "bin/VidInsightBackend/_internal":"_internal",
+    "bin/ffmpeg":"ffmpeg"
+    },
+    "macOS":{
+      "files": {
+               "Frameworks": "bin/VidInsightBackend/_internal"
+      }
+    },
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "status": "FAILED",
+  "message": "'latin-1' codec can't encode character '\\u3001' in position 88: ordinal not in range(256)"
+}

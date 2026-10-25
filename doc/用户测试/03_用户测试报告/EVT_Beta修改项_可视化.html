@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>EVT Beta 修改项必须有证据链</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:"Microsoft YaHei","PingFang SC",sans-serif;
+    background:#eef1f6; padding:36px; color:#1a1f2e;
+  }
+  .page { width:1400px; margin:0 auto; background:#fff; border-radius:10px;
+          box-shadow:0 4px 24px rgba(20,40,90,.10); padding:38px 44px 44px; }
+
+  .head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:6px; }
+  .head h1 { font-size:31px; font-weight:800; color:#12245c; letter-spacing:.5px; }
+  .head h1 em { font-style:normal; color:#1b3fa0; }
+  .brand { text-align:right; font-size:15px; font-weight:800; color:#12245c; line-height:1.25; }
+  .brand span { display:block; }
+  .sub { font-size:15px; color:#5b667a; margin-bottom:26px; }
+
+  table { width:100%; border-collapse:separate; border-spacing:0; }
+  thead th {
+    background:linear-gradient(180deg,#1b3fa0,#15307c); color:#fff;
+    font-size:16px; font-weight:700; padding:15px 18px; text-align:left;
+    letter-spacing:.4px;
+  }
+  thead th:first-child { border-radius:8px 0 0 0; }
+  thead th:last-child  { border-radius:0 8px 0 0; }
+
+  tbody td { padding:15px 18px; font-size:14.5px; line-height:1.62;
+             border-bottom:1px solid #e6eaf2; vertical-align:top; }
+  tbody tr:nth-child(even) td { background:#f7f9fd; }
+  tbody td:first-child { font-weight:600; color:#1a1f2e; }
+
+  /* 分档条 */
+  tr.tier td {
+    background:#12245c !important; color:#fff; font-size:15px; font-weight:800;
+    padding:11px 18px; letter-spacing:.6px;
+  }
+  tr.tier .tag { display:inline-block; padding:2px 10px; border-radius:4px;
+                 font-size:12.5px; margin-left:10px; font-weight:700; }
+  tr.tier .must { background:#e5484d; }
+  tr.tier .should { background:#2f7de1; }
+  tr.tier .could { background:#8a94a6; }
+
+  .ev { color:#12245c; }
+  .mod { color:#0e7c66; font-weight:600; }
+
+  .foot { margin-top:30px; display:flex; gap:16px; }
+  .card { flex:1; border-radius:9px; padding:16px 18px; font-size:14px; line-height:1.6; }
+  .card b { display:block; font-size:15.5px; margin-bottom:6px; }
+  .card.m { background:#fdecec; border:1px solid #f5b8ba; }
+  .card.m b { color:#c0392b; }
+  .card.s { background:#eaf2fd; border:1px solid #b9d2f5; }
+  .card.s b { color:#1f5fb8; }
+  .card.c { background:#f2f4f8; border:1px solid #d5dbe6; }
+  .card.c b { color:#5b667a; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="head">
+    <h1>EVT Beta <em>修改项必须有证据链</em></h1>
+    <div class="brand"><span>Tech ×</span><span>Academy</span></div>
+  </div>
+  <p class="sub">不要看到一个间题就改一处，要把证据、洞察和修改连起来</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:26%">测试证据</th>
+        <th style="width:15%">用户问题</th>
+        <th style="width:26%">洞察</th>
+        <th style="width:33%">EVT Beta 修改</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="tier">
+        <td colspan="4">Must Fix · 不改就影响产品成立
+          <span class="tag must">核心问题 · 状态不可见</span></td>
+      </tr>
+      <tr>
+        <td>提交后盯着进度条约 90 秒；鼠标反复移动、点开又关掉侧栏（3 次），问"它是不是没在动？"</td>
+        <td>状态不明确</td>
+        <td>长任务里"静默等待"会被理解为"故障"——用户要的不是更多信息，而是<b>能判断它还在动</b></td>
+        <td class="mod">进度反馈增加"正在进行中"的动态证据：转写显示实时百分比 + 已处理时长</td>
+      </tr>
+      <tr>
+        <td>转写到约 40% 时问"还要多久？"；无法回答后转头去做别的事，5 分钟后才回来</td>
+        <td>无法预估等待</td>
+        <td>用户不是要精确时间，是要<b>决定是否值得等</b>——无法预估就只能离开</td>
+        <td class="mod">显示基于已处理进度的粗估剩余时间（"约还需 X 分钟"），并标注为估算</td>
+      </tr>
+      <tr>
+        <td>第 2 次生成时主动切到别的应用，回来看到"已完成"，但不确定中间是否出过错</td>
+        <td>过程不可追溯</td>
+        <td>用户对"黑盒完成"缺乏信任，尤其失败过一次之后；需要<b>可回看的执行记录</b></td>
+        <td class="mod">完成后保留阶段耗时明细（解析/下载/转写/总结各 Xs），可展开查看</td>
+      </tr>
+      <tr>
+        <td>首次使用在空界面停留约 20 秒才点输入框，说"我不知道该从哪开始"</td>
+        <td>启动困难</td>
+        <td>空白界面对新用户是认知负担——不是功能缺失，是<b>不知道第一步做什么</b></td>
+        <td class="mod">空状态给出明确的下一步：示例链接可直接点击填入</td>
+      </tr>
+
+      <tr class="tier">
+        <td colspan="4">Should Fix · 明显改善体验
+          <span class="tag should">已实现或半天内可完成</span></td>
+      </tr>
+      <tr>
+        <td>粘贴链接后界面约 1.5 秒无变化，用户又点了一次提交</td>
+        <td>反馈延迟</td>
+        <td>1–2 秒的空白足以让用户怀疑"没点上"并重复操作</td>
+        <td class="mod">提交后立即给出"正在识别链接…"的即时反馈</td>
+      </tr>
+      <tr>
+        <td>看到"生成内容洞察"按钮时问："这个要花钱吗？"</td>
+        <td>成本不确定</td>
+        <td>涉及外部 AI 服务时，用户第一反应是担心产生费用</td>
+        <td class="mod">按钮附近标注当前使用的模型与来源，让成本透明</td>
+      </tr>
+      <tr>
+        <td>生成后手动滚动寻找"结论"，问"总结在哪？"</td>
+        <td>信息层级不清</td>
+        <td>长报告里用户找不到自己最想要的那一段</td>
+        <td class="mod">报告顶部加目录锚点，可点击跳转各章节</td>
+      </tr>
+      <tr>
+        <td>想把报告分享给别人，截图发微信，反馈"字太小看不清"</td>
+        <td>分享不便</td>
+        <td>用户的真实使用终点往往是分享，而截图是最差的方式</td>
+        <td class="mod">一图流导出（1080×1350 竖图）——已实现，需在完成态更明显暴露入口</td>
+      </tr>
+
+      <tr class="tier">
+        <td colspan="4">Could Fix · 有价值，但可下一轮解决
+          <span class="tag could">诚实标注为下一轮</span></td>
+      </tr>
+      <tr>
+        <td>问"能不能总结这个合集里的所有视频？"</td>
+        <td>批量需求</td>
+        <td>真实用户场景是批量研究同赛道，不是单条</td>
+        <td class="mod">收藏专辑批量生成（已实现基础版），下一轮做批量对比视图</td>
+      </tr>
+      <tr>
+        <td>问"能不能标出视频里哪句话说的？"</td>
+        <td>溯源需求</td>
+        <td>用户对 AI 总结的信任需要原文支撑</td>
+        <td class="mod">报告结论关联时间戳，可点击跳转</td>
+      </tr>
+      <tr>
+        <td>问"这些视频的封面为什么有的显示不出来？"</td>
+        <td>数据缺失</td>
+        <td>历史数据未记录封面</td>
+        <td class="mod">新捕获已记录封面；老数据补录（下一轮）</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="foot">
+    <div class="card m"><b>Must Fix</b>不改就影响产品成立<br><span style="color:#7a4a4a">核心问题 1 个（状态可见性）· 由 4 条行为证据支撑</span></div>
+    <div class="card s"><b>Should Fix</b>明显改善体验<br><span style="color:#4a5f7a">4 项 · 均已实现或半天内可完成</span></div>
+    <div class="card c"><b>Could Fix</b>有价值，但可下一轮解决<br><span style="color:#5b667a">3 项 · 已标注为下一轮</span></div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,120 @@
+PyInstaller\loader\pyimod02_importers.py:450: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+2026-10-19 02:21:39 [INFO] app.transcriber.transcriber_provider - 初始化转录服务提供器
+2026-10-19 02:21:39 [INFO] __main__ - Starting server on 0.0.0.0:8483
+INFO:     Started server process [30340]
+INFO:     Waiting for application startup.
+2026-10-19 02:21:39 [INFO] __main__ - [startup 1/5] register_handler() — 注册事件处理器
+2026-10-19 02:21:39 [INFO] events - 注册监听器成功
+2026-10-19 02:21:39 [INFO] __main__ - [startup 2/5] init_db() — 初始化 SQLite 数据库
+2026-10-19 02:21:39 [INFO] __main__ - [startup 3/5] TranscriberConfigManager — 读取转写器配置
+2026-10-19 02:21:39 [INFO] __main__ -            当前转写器: type=fast-whisper, model_size=small
+2026-10-19 02:21:39 [INFO] __main__ - [startup 4/5] seed_default_providers() — 初始化默认 LLM 供应商
+2026-10-19 02:21:39 [INFO] app.db.provider_dao - All builtin providers already present, nothing to seed.
+2026-10-19 02:21:39 [INFO] __main__ - [startup 5/5] 启动完成，等待请求
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8483 (Press CTRL+C to quit)
+2026-10-19 02:21:39 [INFO] app.services.knowledge_base - 已加载统一知识库: 0 chunks
+2026-10-19 02:21:39 [INFO] __main__ - [startup warmup] 知识库预热完成: {'total_chunks': 0, 'total_notes': 0, 'bm25_docs': 0, 'bm25_available': True, 'reranker_available': False}
+INFO:     127.0.0.1:10303 - "GET /docs HTTP/1.1" 200 OK
+2026-10-19 02:21:53 [INFO] app.services.note - 使用转写器：fast-whisper [req:bb5877540cde]
+2026-10-19 02:21:53 [INFO] app.transcriber.transcriber_provider - 请求转录器类型: fast-whisper [req:bb5877540cde]
+2026-10-19 02:21:53 [INFO] app.transcriber.transcriber_provider - 创建 WhisperTranscriber 实例: TranscriberType.FAST_WHISPER [req:bb5877540cde]
+2026-10-19 02:21:53 [WARNING] app.transcriber.whisper - fast-whisper CUDA 运行库不可用，降级到 CPU。缺少 CUDA 运行库: cudnn_ops64_9.dll, cublas64_12.dll。请安装 cuDNN 9，并确认 CUDA/cuDNN 的 bin 目录在 PATH 中。 [req:bb5877540cde]
+2026-10-19 02:22:15 [WARNING] app.transcriber.whisper - 加载 whisper-small 失败: Cannot load the vocabulary from the model directory; 清理 cache 后重试 [req:bb5877540cde]
+2026-10-19 02:22:15 [INFO] app.transcriber.whisper - 清理损坏 cache: C:\Users\30369\AppData\Roaming\VidInsight\models\whisper\models--Systran--faster-whisper-small [req:bb5877540cde]
+An error occured while synchronizing the model Systran/faster-whisper-small from the Hugging Face Hub:
+An error happened while trying to locate the files on the Hub and we cannot find the appropriate snapshot folder for the specified revision on the local disk. Please check your internet connection and try again.
+Trying to load the model directly from the local cache, if it exists.
+2026-10-19 02:22:37 [ERROR] app.transcriber.transcriber_provider - WhisperTranscriber 创建失败: Cannot find an appropriate cached snapshot folder for the specified revision on the local disk and outgoing traffic has been disabled. To enable repo look-ups and downloads online, pass 'local_files_only=False' as input. [req:bb5877540cde]
+INFO:     127.0.0.1:10304 - "POST /api/generate_note HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:11762 - "GET /api/transcriber_models_status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6907 - "GET /api/transcriber_models_status HTTP/1.1" 200 OK
+2026-10-19 02:27:01 [INFO] app.services.note - 使用转写器：fast-whisper [req:d4708c0ea05f]
+2026-10-19 02:27:01 [INFO] app.transcriber.transcriber_provider - 请求转录器类型: fast-whisper [req:d4708c0ea05f]
+2026-10-19 02:27:01 [INFO] app.transcriber.transcriber_provider - 创建 WhisperTranscriber 实例: TranscriberType.FAST_WHISPER [req:d4708c0ea05f]
+2026-10-19 02:27:01 [WARNING] app.transcriber.whisper - fast-whisper CUDA 运行库不可用，降级到 CPU。缺少 CUDA 运行库: cudnn_ops64_9.dll, cublas64_12.dll。请安装 cuDNN 9，并确认 CUDA/cuDNN 的 bin 目录在 PATH 中。 [req:d4708c0ea05f]
+2026-10-19 02:27:24 [INFO] app.transcriber.whisper - fast-whisper 已加载: model=small, device=cpu, compute_type=int8 [req:d4708c0ea05f]
+2026-10-19 02:27:24 [INFO] app.transcriber.transcriber_provider - WhisperTranscriber 创建成功 [req:d4708c0ea05f]
+2026-10-19 02:27:24 [INFO] app.services.note - NoteGenerator 初始化完成 [req:d4708c0ea05f]
+写入状态文件: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json 当前状态: TaskStatus.PENDING
+状态文件写入成功: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json
+INFO:     127.0.0.1:6908 - "POST /api/generate_note HTTP/1.1" 200 OK
+2026-10-19 02:27:24 [INFO] app.services.note - 任务进入执行队列 (task_id=c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c) [req:d4708c0ea05f]
+2026-10-19 02:27:24 [INFO] app.services.note - 使用转写器：fast-whisper
+2026-10-19 02:27:24 [INFO] app.transcriber.transcriber_provider - 请求转录器类型: fast-whisper
+2026-10-19 02:27:24 [INFO] app.services.note - NoteGenerator 初始化完成
+2026-10-19 02:27:24 [INFO] app.services.note - 开始生成笔记 (task_id=c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c)
+写入状态文件: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json 当前状态: TaskStatus.PARSING
+状态文件写入成功: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json
+2026-10-19 02:27:24 [INFO] app.services.note - 使用下载器：<class 'app.downloaders.local_downloader.LocalDownloader'>
+2026-10-19 02:27:25 [INFO] app.services.note - 创建 GPT 实例 workbuddy
+2026-10-19 02:27:25 [INFO] app.gpt.workbuddy_provider - [WorkBuddy] 客户端就绪 base_url=http://127.0.0.1:7864/v1 并发上限=2 退避=5.0s×2 封顶120.0s 重试≤5 超时=连接10.0s/首字节60.0s
+2026-10-19 02:27:25 [INFO] app.services.note - 尝试获取平台字幕（优先于音频下载）...
+2026-10-19 02:27:25 [INFO] app.services.note - 平台无可用字幕，将下载音频后转写
+写入状态文件: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json 当前状态: TaskStatus.DOWNLOADING
+状态文件写入成功: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json
+2026-10-19 02:27:25 [INFO] app.services.note - 开始下载音频
+_gpu_test _gpu_test.wav D:/CyberStomach/VidInsight/doc/_gpu_test.wav
+2026-10-19 02:27:26 [ERROR] app.services.note - 音频下载失败：提取封面失败: D:/CyberStomach/VidInsight/doc\_gpu_test_cover.jpg
+2026-10-19 02:27:26 [ERROR] app.services.note - 任务异常 (task_id=c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c)
+Traceback (most recent call last):
+  File "app\downloaders\local_downloader.py", line 51, in extract_cover
+  File "subprocess.py", line 571, in run
+subprocess.CalledProcessError: Command '['ffmpeg', '-i', 'D:/CyberStomach/VidInsight/doc/_gpu_test.wav', '-ss', '00:00:01', '-vframes', '1', '-q:v', '2', '-y', 'D:/CyberStomach/VidInsight/doc\\_gpu_test_cover.jpg']' returned non-zero exit status 4294967274.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "app\services\note.py", line 577, in _download_media
+  File "app\downloaders\local_downloader.py", line 124, in download
+  File "app\downloaders\local_downloader.py", line 58, in extract_cover
+RuntimeError: 提取封面失败: D:/CyberStomach/VidInsight/doc\_gpu_test_cover.jpg
+写入状态文件: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json 当前状态: TaskStatus.FAILED
+状态文件写入成功: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json
+2026-10-19 02:27:26 [ERROR] app.services.note - 生成笔记流程异常 (task_id=c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c)：提取封面失败: D:/CyberStomach/VidInsight/doc\_gpu_test_cover.jpg
+Traceback (most recent call last):
+  File "app\downloaders\local_downloader.py", line 51, in extract_cover
+  File "subprocess.py", line 571, in run
+subprocess.CalledProcessError: Command '['ffmpeg', '-i', 'D:/CyberStomach/VidInsight/doc/_gpu_test.wav', '-ss', '00:00:01', '-vframes', '1', '-q:v', '2', '-y', 'D:/CyberStomach/VidInsight/doc\\_gpu_test_cover.jpg']' returned non-zero exit status 4294967274.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "app\services\note.py", line 207, in generate
+  File "app\services\note.py", line 577, in _download_media
+  File "app\downloaders\local_downloader.py", line 124, in download
+  File "app\downloaders\local_downloader.py", line 58, in extract_cover
+RuntimeError: 提取封面失败: D:/CyberStomach/VidInsight/doc\_gpu_test_cover.jpg
+写入状态文件: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json 当前状态: TaskStatus.FAILED
+状态文件写入成功: C:\Users\30369\AppData\Roaming\VidInsight\note_results\c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c.status.json
+2026-10-19 02:27:26 [INFO] app.services.note - Note generated: c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c [req:d4708c0ea05f]
+2026-10-19 02:27:26 [WARNING] app.services.note - 任务 c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c 执行失败，跳过保存 [req:d4708c0ea05f]
+INFO:     127.0.0.1:9539 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9581 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10892 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2757 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5574 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:13813 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5874 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5885 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5779 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:11911 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12293 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4537 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6761 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6770 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1500 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4843 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:8779 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7348 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5025 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5074 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10619 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6988 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:3133 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12060 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4965 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:8036 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10281 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:8247 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:8757 - "GET /api/task_status/c5cd36c7-464b-4a13-b65d-7d9f77fc0e0c HTTP/1.1" 200 OK

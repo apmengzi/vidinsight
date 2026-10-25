@@ -1,0 +1,4 @@
+{
+  "transcriber_type": "fast-whisper",
+  "whisper_model_size": "tiny"
+}

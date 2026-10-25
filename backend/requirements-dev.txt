@@ -1,0 +1,3 @@
+# 开发/测试依赖（运行时不需要；preflight 的 backend.pytest 步骤依赖）
+pytest>=8.0
+httpx>=0.27

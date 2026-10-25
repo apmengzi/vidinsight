@@ -1,0 +1,47 @@
+[
+  {"id": "q01", "query": "s1mple在比赛里面对影子不开枪到底是什么原因", "task_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354", "source_type": "markdown", "origin_chunk_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354_3", "section_title": "1. 视频主题 [原片 @ 00:00](https://www.bilibili.com/video/BV1t94o62EQB&t=0)"},
+  {"id": "q02", "query": "张思科被狙那波操作要怪他自己吗", "task_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354", "source_type": "transcript", "origin_chunk_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354_26", "start_time": 0.1, "end_time": 29.339},
+  {"id": "q03", "query": "导播和职业选手的游戏分辨率分别是多少", "task_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354", "source_type": "transcript", "origin_chunk_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354_27", "start_time": 25.16, "end_time": 55.19},
+  {"id": "q04", "query": "1280×960分辨率下影子的可见距离怎么样", "task_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354", "source_type": "transcript", "origin_chunk_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354_28", "start_time": 48.14, "end_time": 85.119},
+  {"id": "q05", "query": "画面比例和分辨率哪个对影子可视距离影响更大", "task_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354", "source_type": "transcript", "origin_chunk_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354_29", "start_time": 79.2, "end_time": 111.16},
+  {"id": "q06", "query": "同样横向像素数不同纵向分辨率影子距离有啥差别", "task_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354", "source_type": "transcript", "origin_chunk_id": "0e1e486d-0302-42b0-b445-10ecd2dd8354_30", "start_time": 103.22, "end_time": 141.19},
+
+  {"id": "q07", "query": "z4kr那波迷惑操作暴露了CS2什么渲染问题", "task_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc", "source_type": "markdown", "origin_chunk_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc_3", "section_title": "1. 视频主题 [原片 @ 00:00](https://www.bilibili.com/video/BV1j94k6nE1K&t=0)"},
+  {"id": "q08", "query": "职业选手视角里影子直接消失是怎么造成的", "task_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc", "source_type": "transcript", "origin_chunk_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc_31", "start_time": 0.0, "end_time": 34.28},
+  {"id": "q09", "query": "这个阴影渲染漏洞最早是什么时候被玩家反馈的", "task_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc", "source_type": "transcript", "origin_chunk_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc_31", "start_time": 0.0, "end_time": 34.28},
+  {"id": "q10", "query": "V社对玩家反馈的游戏漏洞态度如何", "task_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc", "source_type": "transcript", "origin_chunk_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc_32", "start_time": 24.4, "end_time": 59.04},
+  {"id": "q11", "query": "绿龙对阵猎兔那场比赛打得怎么样", "task_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc", "source_type": "transcript", "origin_chunk_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc_33", "start_time": 52.52, "end_time": 85.64},
+  {"id": "q12", "query": "单届赛事个人五杀次数的历史纪录是多少", "task_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc", "source_type": "transcript", "origin_chunk_id": "11613eda-fb59-4c61-8c7a-26d8d79deebc_33", "start_time": 52.52, "end_time": 85.64},
+
+  {"id": "q13", "query": "400到500价位的妙界按摩仪怎么选才不踩雷", "task_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259", "source_type": "markdown", "origin_chunk_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259_3", "section_title": "1. 视频主题 [原片 @ 00:06](https://www.bilibili.com/video/BV19xR5BPEvE&t=6)"},
+  {"id": "q14", "query": "妙界这几款按摩仪都支持哪几种佩戴方式", "task_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259", "source_type": "markdown", "origin_chunk_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259_5", "section_title": "2.1 五款共性卖点（系列基础盘）"},
+  {"id": "q15", "query": "为什么说肩颈按摩仪对久坐上班族是刚需", "task_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259", "source_type": "transcript", "origin_chunk_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259_44", "start_time": 6.266, "end_time": 41.183},
+  {"id": "q16", "query": "妙界按摩仪充满一次电能用多久", "task_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259", "source_type": "transcript", "origin_chunk_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259_47", "start_time": 94.216, "end_time": 128.016},
+  {"id": "q17", "query": "用肩带固定佩戴按摩仪有什么额外好处", "task_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259", "source_type": "transcript", "origin_chunk_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259_47", "start_time": 94.216, "end_time": 128.016},
+  {"id": "q18", "query": "R3至尊升级版对老人上手友好吗", "task_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259", "source_type": "transcript", "origin_chunk_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259_50", "start_time": 183.333, "end_time": 221.266},
+  {"id": "q19", "query": "高频捶打功能是哪一款按摩仪才有的", "task_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259", "source_type": "transcript", "origin_chunk_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259_53", "start_time": 274.166, "end_time": 308.783},
+  {"id": "q20", "query": "R6的按摩头设计有什么特别之处", "task_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259", "source_type": "transcript", "origin_chunk_id": "457ef05d-d7e8-4c38-bfc6-d77cc8738259_56", "start_time": 356.216, "end_time": 394.466},
+
+  {"id": "q21", "query": "妙界被一堆UP主推荐到底是真好用还是恰饭", "task_id": "b217f969-9489-48dd-a7fe-74d77b7c005c", "source_type": "markdown", "origin_chunk_id": "b217f969-9489-48dd-a7fe-74d77b7c005c_3", "section_title": "1. 视频主题 [原片 @ 00:00](https://www.bilibili.com/video/BV1Phd5B9EpG&t=0)"},
+  {"id": "q22", "query": "R3 mini的重量和热敷温度是多少", "task_id": "b217f969-9489-48dd-a7fe-74d77b7c005c", "source_type": "markdown", "origin_chunk_id": "b217f969-9489-48dd-a7fe-74d77b7c005c_5", "section_title": "产品矩阵与功能差异"},
+  {"id": "q23", "query": "这期测评一共包含了妙界哪六款产品", "task_id": "b217f969-9489-48dd-a7fe-74d77b7c005c", "source_type": "transcript", "origin_chunk_id": "b217f969-9489-48dd-a7fe-74d77b7c005c_41", "start_time": 0.0, "end_time": 23.2},
+  {"id": "q24", "query": "R3至尊升级版的热敷体感是什么样的", "task_id": "b217f969-9489-48dd-a7fe-74d77b7c005c", "source_type": "transcript", "origin_chunk_id": "b217f969-9489-48dd-a7fe-74d77b7c005c_48", "start_time": 89.2, "end_time": 106.08},
+  {"id": "q25", "query": "哪款按摩仪的语音播报没办法关闭", "task_id": "b217f969-9489-48dd-a7fe-74d77b7c005c", "source_type": "transcript", "origin_chunk_id": "b217f969-9489-48dd-a7fe-74d77b7c005c_48", "start_time": 89.2, "end_time": 106.08},
+  {"id": "q26", "query": "R6的热敷能覆盖多大范围", "task_id": "b217f969-9489-48dd-a7fe-74d77b7c005c", "source_type": "transcript", "origin_chunk_id": "b217f969-9489-48dd-a7fe-74d77b7c005c_55", "start_time": 173.68, "end_time": 189.56},
+  {"id": "q27", "query": "手拉式佩戴方式有什么好处", "task_id": "b217f969-9489-48dd-a7fe-74d77b7c005c", "source_type": "transcript", "origin_chunk_id": "b217f969-9489-48dd-a7fe-74d77b7c005c_69", "start_time": 341.8, "end_time": 354.96},
+
+  {"id": "q28", "query": "UP主实际测试了妙界哪四款按摩仪", "task_id": "6ba78076-267d-47f6-9c4d-d40c22373cef", "source_type": "markdown", "origin_chunk_id": "6ba78076-267d-47f6-9c4d-d40c22373cef_3", "section_title": "1. 视频主题 [原片 @ 00:00](https://www.bilibili.com/video/BV1FJgV6PE6M&t=0)"},
+  {"id": "q29", "query": "博主之前为什么一直怀疑妙界的产品", "task_id": "6ba78076-267d-47f6-9c4d-d40c22373cef", "source_type": "transcript", "origin_chunk_id": "6ba78076-267d-47f6-9c4d-d40c22373cef_55", "start_time": 0.06, "end_time": 27.84},
+  {"id": "q30", "query": "腰背按摩仪怎么固定在椅子上使用", "task_id": "6ba78076-267d-47f6-9c4d-d40c22373cef", "source_type": "transcript", "origin_chunk_id": "6ba78076-267d-47f6-9c4d-d40c22373cef_59", "start_time": 84.16, "end_time": 103.08},
+  {"id": "q31", "query": "哪款产品能放艾草片边热敷边艾灸", "task_id": "6ba78076-267d-47f6-9c4d-d40c22373cef", "source_type": "transcript", "origin_chunk_id": "6ba78076-267d-47f6-9c4d-d40c22373cef_63", "start_time": 165.72, "end_time": 188.16},
+  {"id": "q32", "query": "高频微震按摩和揉捏按摩有什么区别", "task_id": "6ba78076-267d-47f6-9c4d-d40c22373cef", "source_type": "transcript", "origin_chunk_id": "6ba78076-267d-47f6-9c4d-d40c22373cef_63", "start_time": 165.72, "end_time": 188.16},
+  {"id": "q33", "query": "有没有可以当午休抱枕用的按摩产品", "task_id": "6ba78076-267d-47f6-9c4d-d40c22373cef", "source_type": "transcript", "origin_chunk_id": "6ba78076-267d-47f6-9c4d-d40c22373cef_67", "start_time": 238.29, "end_time": 259.329},
+  {"id": "q34", "query": "M10 Pro满电续航时间有多长", "task_id": "6ba78076-267d-47f6-9c4d-d40c22373cef", "source_type": "transcript", "origin_chunk_id": "6ba78076-267d-47f6-9c4d-d40c22373cef_71", "start_time": 310.88, "end_time": 335.34},
+
+  {"id": "q35", "query": "不同分辨率下阴影渲染距离不一致是怎么回事", "task_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e", "source_type": "markdown", "origin_chunk_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e_2", "section_title": "1. 视频主题 [原片 @ 00:00](https://www.bilibili.com/video/BV1P4th6PE6B&t=0)"},
+  {"id": "q36", "query": "低分辨率下能看到角色穿墙的动画吗", "task_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e", "source_type": "markdown", "origin_chunk_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e_5", "section_title": "2. 产品/品牌卖点 [原片 @ 00:20](https://www.bilibili.com/video/BV1P4th6PE6B&t=20)"},
+  {"id": "q37", "query": "为什么说4比3比例自带一些独特优势", "task_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e", "source_type": "transcript", "origin_chunk_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e_28", "start_time": 0.2, "end_time": 36.38},
+  {"id": "q38", "query": "烟雾后透视的漏洞出现在哪个点位", "task_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e", "source_type": "transcript", "origin_chunk_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e_30", "start_time": 55.09, "end_time": 96.34},
+  {"id": "q39", "query": "超宽屏分辨率在什么场景能多看到敌人阴影", "task_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e", "source_type": "transcript", "origin_chunk_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e_32", "start_time": 118.83, "end_time": 161.17},
+  {"id": "q40", "query": "1280×640以下看得到人穿模这个说法靠谱吗", "task_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e", "source_type": "transcript", "origin_chunk_id": "bb6d0e69-33c3-4aa4-9dd1-21c76e474d0e_36", "start_time": 220.81, "end_time": 256.03}
+]

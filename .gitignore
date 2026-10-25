@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+*.local
+
+# 运行数据（不入库）
+backend/models/
+backend/data/
+backend/note_results/
+backend/uploads/
+backend/vector_db/
+backend/static/screenshots/
+backend/static/covers/
+backend/logs/
+backend/traces/
+backend/board_notes.json
+backend/bili_note.db
+backend/config/downloader.json
+backend/config/transcriber.json
+backend/app/db/*.db
+vidinsight-frontend/src-tauri/target/
+vidinsight-frontend/.env*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 构建产物
+backend/dist/
+backend/build/
+backend/dist_build/
+*.spec.bak
+vidinsight-frontend/src-tauri/bin/
+
+# 私有文档
+CLAUDE项目进度.md
+doc/汇报准备/
+out/
+.zcode/
+.tsc-baseline
+NUL
