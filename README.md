@@ -27,6 +27,8 @@
 
 ---
 
+> 本项目基于开源项目 [BiliNote](https://github.com/JefferyHcool/BiliNote) v2.4.0 开发，在原有视频笔记生成能力之上新增了 Agent 问答层（ReAct 循环、混合检索知识库、安全护栏）。感谢上游作者的杰出工作。
+
 ## ✨ 核心特性
 
 ### 视频笔记生成

@@ -133,7 +133,7 @@ RUN sed -i 's/proxy_pass http:\/\/backend:8483/proxy_pass http:\/\/127.0.0.1:848
 
 # 启动 supervisor
 # 推荐启动方式（覆盖默认 env）：
-#   docker run -d --name bilinote --env-file .env -p 8080:80 bilinote-aio
+#   docker run -d --name vidinsight --env-file .env -p 8080:80 vidinsight-aio
 # 单个变量覆盖：
 #   docker run -d -e TRANSCRIBER_TYPE=groq -e WHISPER_MODEL_SIZE=base ...
 EXPOSE 80
