@@ -560,6 +560,28 @@ def webview_meta_fetch(task_id: str):
 _hellotik_store: dict = {}  # {task_id: {"data": {...}, "ts": monotonic}}
 
 
+@router.post("/parse/hellotik_direct")
+def hellotik_direct_parse(payload: dict):
+    """Web 版 hellotik 直链解析：B 站链接 -> 无水印 CDN 直链。
+
+    桌面版靠 Tauri 内嵌 WebView 操作 hellotik 页面；Web 部署没有 Tauri，
+    改用 CDP 连接宿主机 Chrome（需 --remote-debugging-port），把同样的真人
+    操作搬过去。失败一律 success=false，调用方走常规通道。
+    """
+    url = str(payload.get("video_url") or "").strip()
+    if not url:
+        return R.error("video_url 必填")
+    try:
+        from app.services.hellotik_cdp import parse_direct_url
+        result = parse_direct_url(url)
+    except Exception as e:  # noqa: BLE001
+        log_event(logger, "parse.hellotik_direct_fail", level=logging.WARNING, err=str(e)[:150])
+        return R.success({"success": False, "reason": str(e)[:150]})
+    if result.get("success"):
+        log_event(logger, "parse.hellotik_direct_ok", title=(result.get("title") or "")[:40])
+    return R.success(result)
+
+
 @router.post("/parse/hellotik")
 def hellotik_ingest(payload: dict):
     import time as _t
