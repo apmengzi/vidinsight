@@ -196,7 +196,7 @@ def run_note_task(task_id: str, video_url: str, platform: str, quality: Download
 
 
 @router.post('/delete_task')
-def delete_task(data: RecordRequest):
+def delete_task(data: RecordRequest, request: Request):
     try:
         from app.db.video_task_dao import get_tasks_by_video
         from app.routers.chat import clear_index_status
@@ -204,6 +204,14 @@ def delete_task(data: RecordRequest):
         from app.services.vector_store import VectorStoreManager
 
         task_ids = get_tasks_by_video(data.video_id, data.platform)
+        # 只删自己名下的任务，避免误删他人数据
+        try:
+            from app.services.owner_isolation import owner_from_request, filter_tasks_by_owner
+            _visible = filter_tasks_by_owner(NOTE_OUTPUT_DIR, task_ids, owner_from_request(request))
+            task_ids = [t for t in task_ids if t in _visible]
+        except Exception as _e:
+            logger.warning(f"delete_task owner 过滤失败，跳过删除: {_e}")
+            task_ids = []
         deleted_files = 0
         for task_id in task_ids:
             try:
@@ -247,7 +255,7 @@ async def upload(file: UploadFile = File(...)):
 
 
 @router.post("/generate_note")
-def generate_note(data: VideoRequest, background_tasks: BackgroundTasks):
+def generate_note(data: VideoRequest, background_tasks: BackgroundTasks, request: Request):
     try:
         # 就绪门禁：本地转写引擎（fast-whisper / mlx-whisper）必须等模型下载完才能跑视频，
         # 否则任务会卡在首次下载（慢 / OOM / 截断），用户只看到一个静默失败的任务。
@@ -288,6 +296,13 @@ def generate_note(data: VideoRequest, background_tasks: BackgroundTasks):
         # 统一先写入 PENDING，表示已进入队列等待串行执行
         NoteGenerator()._update_status(task_id, TaskStatus.PENDING)
 
+        # 登记任务归属（匿名 owner），供历史列表按用户过滤
+        try:
+            from app.services.owner_isolation import owner_from_request, register_owner
+            register_owner(NOTE_OUTPUT_DIR, task_id, owner_from_request(request))
+        except Exception as _e:
+            logger.warning(f"登记任务归属失败 (task_id={task_id}): {_e}")
+
         # 客户端已经抓好字幕的话，写到转写缓存文件，NoteGenerator 的 cache-hit 逻辑会直接用上
         if data.prefetched_transcript:
             try:
@@ -314,7 +329,15 @@ def generate_note(data: VideoRequest, background_tasks: BackgroundTasks):
 
 
 @router.get("/task_status/{task_id}")
-def get_task_status(task_id: str):
+def get_task_status(task_id: str, request: Request):
+    # owner 校验：防止知道 task_id 就能看别人的任务
+    try:
+        from app.services.owner_isolation import owner_from_request, can_access
+        if not can_access(NOTE_OUTPUT_DIR, task_id, owner_from_request(request)):
+            return R.error(msg="任务不存在或无权访问", code=300404)
+    except Exception as _e:
+        logger.warning(f"owner 校验异常 (task_id={task_id}): {_e}")
+
     status_path = os.path.join(NOTE_OUTPUT_DIR, f"{task_id}.status.json")
     result_path = os.path.join(NOTE_OUTPUT_DIR, f"{task_id}.json")
 
@@ -396,7 +419,7 @@ def get_task_status(task_id: str):
 
 
 @router.get("/tasks/list")
-def list_tasks(limit: int = 100, offset: int = 0):
+def list_tasks(request: Request, limit: int = 100, offset: int = 0):
     """历史页后端兜底：列出 note_results 里的全部任务（含成功产物 markdown）。
 
     前端任务列表只存浏览器 IndexedDB（taskStore persist），换浏览器/清缓存/
@@ -454,6 +477,16 @@ def list_tasks(limit: int = 100, offset: int = 0):
                 except Exception:
                     pass
             items.append(item)
+        # 按匿名 owner 过滤：只返回属于当前浏览器的任务
+        try:
+            from app.services.owner_isolation import owner_from_request, filter_tasks_by_owner
+            _owner = owner_from_request(request)
+            _visible = filter_tasks_by_owner(NOTE_OUTPUT_DIR, [i["task_id"] for i in items], _owner)
+            items = [i for i in items if i["task_id"] in _visible]
+        except Exception as _e:
+            logger.warning(f"任务列表 owner 过滤失败，返回空列表: {_e}")
+            items = []
+
         items.sort(key=lambda x: x["created_at"], reverse=True)
         total = len(items)
         limit = max(1, min(limit, 500))
@@ -572,8 +605,8 @@ def hellotik_direct_parse(payload: dict):
     if not url:
         return R.error("video_url 必填")
     try:
-        from app.services.hellotik_cdp import parse_direct_url
-        result = parse_direct_url(url)
+        from app.services.hellotik_cdp import parse_any
+        result = parse_any(url)
     except Exception as e:  # noqa: BLE001
         log_event(logger, "parse.hellotik_direct_fail", level=logging.WARNING, err=str(e)[:150])
         return R.success({"success": False, "reason": str(e)[:150]})

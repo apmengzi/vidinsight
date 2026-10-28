@@ -34,6 +34,35 @@ const baseURL = import.meta.env.VITE_API_BASE_URL;
   timeout: 10000,
 });
 
+// ---------------------------------------------------------------------------
+// 匿名 owner：公开部署时每个浏览器只看到自己的任务。
+// 首次访问生成 UUID 存 localStorage，之后每次请求带 X-VidInsight-Owner。
+// 后端按此过滤任务列表（backend/app/services/owner_isolation.py）。
+// 注意：这不是身份认证，只用于隔离误看；清缓存会变成新身份，旧任务不再可见。
+// ---------------------------------------------------------------------------
+const OWNER_KEY = 'vidinsight-owner-id';
+
+const getOwnerId = (): string => {
+  try {
+    let id = localStorage.getItem(OWNER_KEY);
+    if (!id || !/^[A-Za-z0-9_-]{8,64}$/.test(id)) {
+      id = (crypto.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`)
+        .replace(/-/g, '');
+      localStorage.setItem(OWNER_KEY, id);
+    }
+    return id;
+  } catch {
+    // 隐私模式/存储被禁：退化成一个会话级常量，行为同改造前（共享）
+    return 'anonymous-fallback';
+  }
+};
+
+request.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
+  (config.headers as Record<string, string>)['X-VidInsight-Owner'] = getOwnerId();
+  return config;
+});
+
 // 响应拦截器
 request.interceptors.response.use(
   (response: AxiosResponse<IResponse>) => {
