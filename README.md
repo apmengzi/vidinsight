@@ -11,27 +11,36 @@
     <img src="https://img.shields.io/badge/GPT-openai%20%7C%20deepseek%20%7C%20qwen-ff69b4" />
     <img src="https://img.shields.io/badge/docker-supported-blue" />
   </p>
+
+  <h3>
+    🚀 <a href="https://video.apmengzi.online"><b>在线体验 → video.apmengzi.online</b></a>
+  </h3>
+  <p><i>打开即用，粘贴 B 站链接即可生成笔记</i></p>
 </div>
 
 ## 在线试用
 
-**网页版**：http://54.201.112.20 （仅限试用）
+**网页版**：**[https://video.apmengzi.online](https://video.apmengzi.online)**
 
-> ⚠️ 网页端当前限制：
-> - 仅支持 B 站链接（YouTube 部分支持）
-> - 转写为 CPU 模式（有字幕时直接拉取，速度不受影响）
-> - 小红书收藏捕获需桌面端（依赖本地浏览器登录态）
-> - 需自行配置 LLM API Key（设置 → LLM 供应商）
-> - 服务器在美国，国内访问可能较慢
+后端跑在国内工作站上，CPU 转写（faster-whisper small / int8 / 20 线程），实测 **40 分钟视频从贴链接到出完整笔记约 100 秒**。
+
+> 当前能力与限制：
+> - B 站链接全支持（经 hellotik 直链解析，绕过平台风控；小红书、抖音、快手亦可用）
+> - **无需配置 API Key**，服务端已接入百灵 AntLing 模型
+> - 多线程 CPU 转写，长视频约 1~2 分钟出结果
+> - 任务历史按浏览器隔离（匿名 ID 存 localStorage），不同人互不可见；清缓存或换设备会变成新身份
+> - 服务部署在国内，访问速度快
+>
+> 早期试用的美国节点 `http://54.201.112.20` 已不再维护。
 
 
 ---
 
-> 本项目基于开源项目 [BiliNote](https://github.com/JefferyHcool/BiliNote) v2.4.0 开发，在原有视频笔记生成能力之上新增了 Agent 问答层（ReAct 循环、混合检索知识库、安全护栏）。感谢上游作者的杰出工作。
+> **VidInsight 基于 [VidInsight](https://github.com/JefferyHcool/VidInsight) v2.4.0 二次开发**，在原有视频笔记生成能力之上，新增了自主设计的 **VidInsightAgent ReAct Agent 系统**，支持跨视频知识库的 AI 深度问答（BM25 + Function Calling），并配套浏览器插件实现一站式视频学习工作流。
 
 ## ✨ 核心特性
 
-### 视频笔记生成
+### 继承自 VidInsight
 
 - **多平台支持**：Bilibili、YouTube、抖音、快手、本地视频
 - **AI 笔记生成**：LLM 自动提取视频内容，生成结构化 Markdown 笔记
@@ -42,7 +51,7 @@
 
 ### VidInsight 新增
 
-- **🧠 VidInsightAgent ReAct Agent**：不依赖 LangChain/LlamaIndex 等第三方框架，基于 OpenAI Function Calling 协议实现 Thought-Action-Observation 循环
+- **🧠 VidInsightAgent ReAct Agent**：自主设计的 Agent 系统，非 LangChain/LlamaIndex 等第三方框架，基于 OpenAI Function Calling 协议实现 Thought-Action-Observation 循环
 - **🔍 跨视频知识库问答 (RAG)**：对已生成的所有笔记进行统一索引（BM25 + 可选向量搜索 + 可选 BGE Reranker），Agent 自动调用 `search_kb` / `get_source` / `list_notes` 工具在知识库中检索
 - **⚡ 浏览器插件（MV3）**：Chrome / Edge / Firefox，支持 popup 一键生成、视频页悬浮按钮、右键菜单、侧边栏 AI 问答、Cookie 同步
 - **🎯 意图分类 + 工具调用**：Agent 自动判断用户输入属于 `search` / `task` / `chitchat`，按需进入 ReAct 循环，闲聊类直接回复
@@ -96,8 +105,8 @@ VidInsight/
 ### 方式一：Docker 部署（推荐）
 
 ```bash
-git clone https://github.com/apmengzi/vidinsight.git
-cd vidinsight
+git clone https://github.com/JefferyHcool/VidInsight.git
+cd VidInsight
 cp .env.example .env
 
 # 标准部署
@@ -228,6 +237,7 @@ BASE_REGISTRY=docker.m.daocloud.io docker-compose build
 
 ## 🔗 项目来源
 
+本项目基于 [VidInsight](https://github.com/JefferyHcool/VidInsight) v2.4.0 二次开发，感谢原作者的杰出工作。
 
 主要改动：
 - 新增 `VidInsightAgent` ReAct Agent 系统（`backend/app/services/agent.py`）
