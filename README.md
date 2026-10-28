@@ -27,11 +27,9 @@
 
 ---
 
-> **VidInsight 基于 [VidInsight](https://github.com/JefferyHcool/VidInsight) v2.4.0 二次开发**，在原有视频笔记生成能力之上，新增了自主设计的 **VidInsightAgent ReAct Agent 系统**，支持跨视频知识库的 AI 深度问答（BM25 + Function Calling），并配套浏览器插件实现一站式视频学习工作流。
-
 ## ✨ 核心特性
 
-### 继承自 VidInsight
+### 视频笔记生成
 
 - **多平台支持**：Bilibili、YouTube、抖音、快手、本地视频
 - **AI 笔记生成**：LLM 自动提取视频内容，生成结构化 Markdown 笔记
@@ -42,7 +40,7 @@
 
 ### VidInsight 新增
 
-- **🧠 VidInsightAgent ReAct Agent**：自主设计的 Agent 系统，非 LangChain/LlamaIndex 等第三方框架，基于 OpenAI Function Calling 协议实现 Thought-Action-Observation 循环
+- **🧠 VidInsightAgent ReAct Agent**：不依赖 LangChain/LlamaIndex 等第三方框架，基于 OpenAI Function Calling 协议实现 Thought-Action-Observation 循环
 - **🔍 跨视频知识库问答 (RAG)**：对已生成的所有笔记进行统一索引（BM25 + 可选向量搜索 + 可选 BGE Reranker），Agent 自动调用 `search_kb` / `get_source` / `list_notes` 工具在知识库中检索
 - **⚡ 浏览器插件（MV3）**：Chrome / Edge / Firefox，支持 popup 一键生成、视频页悬浮按钮、右键菜单、侧边栏 AI 问答、Cookie 同步
 - **🎯 意图分类 + 工具调用**：Agent 自动判断用户输入属于 `search` / `task` / `chitchat`，按需进入 ReAct 循环，闲聊类直接回复
@@ -96,8 +94,8 @@ VidInsight/
 ### 方式一：Docker 部署（推荐）
 
 ```bash
-git clone https://github.com/JefferyHcool/VidInsight.git
-cd VidInsight
+git clone https://github.com/apmengzi/vidinsight.git
+cd vidinsight
 cp .env.example .env
 
 # 标准部署
@@ -228,7 +226,6 @@ BASE_REGISTRY=docker.m.daocloud.io docker-compose build
 
 ## 🔗 项目来源
 
-本项目基于 [VidInsight](https://github.com/JefferyHcool/VidInsight) v2.4.0 二次开发，感谢原作者的杰出工作。
 
 主要改动：
 - 新增 `VidInsightAgent` ReAct Agent 系统（`backend/app/services/agent.py`）
