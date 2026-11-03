@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTaskStore } from '@/store/taskStore'
+import { fetchTaskList } from '@/services/note.ts'
 import { Clock, FileText, ArrowLeft, Search } from 'lucide-react'
 import NoteHistory from '@/pages/HomePage/components/NoteHistory.tsx'
 import { ScrollArea } from '@/components/ui/scroll-area.tsx'
@@ -16,6 +17,25 @@ export default function HistoryPage() {
   const tasks = useTaskStore(state => state.tasks)
   const currentTaskId = useTaskStore(state => state.currentTaskId)
   const setCurrentTask = useTaskStore(state => state.setCurrentTask)
+  const hydrateFromServer = useTaskStore(state => state.hydrateFromServer)
+
+  // 后端补全必须在这里做，不能只放在 NoteHistory 里（2026-11-03 修）。
+  // 原来只有 NoteHistory 拉 /tasks/list，但本组件在 tasks 为空时会提前 return
+  // 「暂无分析记录」，NoteHistory 根本没挂载 → 补全永远跑不到 → 换浏览器/
+  // 清缓存后历史全空，而服务器上明明有笔记。
+  const [hydrating, setHydrating] = useState(true)
+  useEffect(() => {
+    let cancelled = false
+    fetchTaskList()
+      .then(res => {
+        if (cancelled) return
+        if (res?.items?.length) hydrateFromServer(res.items)
+      })
+      .finally(() => {
+        if (!cancelled) setHydrating(false)
+      })
+    return () => { cancelled = true }
+  }, [hydrateFromServer])
 
   // 按创建时间倒序
   const sortedTasks = useMemo(
@@ -86,11 +106,21 @@ export default function HistoryPage() {
 
   // ===== 渲染 =====
   if (sortedTasks.length === 0) {
+    // 补全请求还没回来时先显示加载态，避免「暂无分析记录」闪一下又出现列表
     return (
       <div className="flex h-full flex-col items-center justify-center bg-[var(--vi-bg)] text-[var(--vi-ink-3)]">
-        <FileText className="h-12 w-12" />
-        <p className="mt-3 text-sm">暂无分析记录</p>
-        <p className="mt-1 text-xs">粘贴竞品视频链接到对话窗口即可开始分析</p>
+        {hydrating ? (
+          <>
+            <Clock className="h-12 w-12 animate-pulse" />
+            <p className="mt-3 text-sm">正在同步分析记录…</p>
+          </>
+        ) : (
+          <>
+            <FileText className="h-12 w-12" />
+            <p className="mt-3 text-sm">暂无分析记录</p>
+            <p className="mt-1 text-xs">粘贴竞品视频链接到对话窗口即可开始分析</p>
+          </>
+        )}
       </div>
     )
   }

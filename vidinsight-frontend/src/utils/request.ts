@@ -42,7 +42,10 @@ const baseURL = import.meta.env.VITE_API_BASE_URL;
 // ---------------------------------------------------------------------------
 const OWNER_KEY = 'vidinsight-owner-id';
 
-const getOwnerId = (): string => {
+// 导出供裸 fetch 场景复用（播放器的 Range 探测、save_video 调用等）。
+// axios 拦截器只覆盖 request 实例；直接用 fetch 时不带这个头，后端 owner
+// 隔离会把笔记判成「别人的」返回 404（2026-11-03 实测：视频明明已归档却探测不到）。
+export const getOwnerId = (): string => {
   try {
     let id = localStorage.getItem(OWNER_KEY);
     if (!id || !/^[A-Za-z0-9_-]{8,64}$/.test(id)) {

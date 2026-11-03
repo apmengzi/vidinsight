@@ -24,8 +24,14 @@ const BACKEND_DEFAULT_PORT: u16 = 8483;
 /// 参数再建环境会直接失败（2026-10-20 实测：捕获窗口白死，导航都不发生）。
 /// direct:// = 内嵌页绕开系统代理直连（App 只访问国内平台+回环，Clash 抖动与
 /// 海外出口风控都避开）；disable-features 三件是 wry 的默认值，替换语义下手动带回。
+///
+/// ⚠️ 必须与 tauri.conf.json 的 additionalBrowserArgs **完全一致**：
+/// 同一个 user-data-dir 只允许一套环境配置，不一致时新建的 WebView 会创建成功
+/// 但立即崩溃（返回 label 后窗口消失，页面 JS 一条信号都发不出）。
+/// 2026-11-03 实测事故：主窗口加了 --remote-debugging-port=9333 做后台调试，
+/// 这里没同步 → 小红书捕获窗口闪退，用户无法重新登录。
 const WEBVIEW_ARGS: &str =
-    "--proxy-server=direct:// --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection";
+    "--proxy-server=direct:// --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9333";
 
 // Sidecar 子进程句柄，用 Mutex 包裹方便 restart 时杀旧进程
 struct SidecarHandle(Mutex<Option<CommandChild>>);
@@ -1527,10 +1533,15 @@ async fn open_xhs_passive_window(app: tauri::AppHandle, url: String) -> Result<S
       }).catch(function(){});
     } catch(e) {}
   }
-  function post(path, body){
+  // 2026-11-03 修复：这个 post 之前只接受两个参数，把调用方传的 onAck
+  // 直接丢掉了——导致 ingested{} 永远是空的，底部计数恒为「已捕获 0」，
+  // 尽管后端实际已经收到 2000+ 次 ingest（美食专辑 157 → 221 条）。
+  function post(path, body, onAck){
     try {
       fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(body) }).catch(function(){});
+        body: JSON.stringify(body) })
+        .then(function(r){ if (r && r.ok && onAck) onAck(); })
+        .catch(function(){});
     } catch(e) {}
   }
   var boardId = (location.pathname.match(/\/board\/([0-9a-f]{24})/) || [])[1] || '';
@@ -2545,11 +2556,39 @@ async fn open_xhs_passive_window(app: tauri::AppHandle, url: String) -> Result<S
     setTimeout(tryAutoStart, 4000);
   }
   var lastCount = -1;
+  // ── 封面加载失败重试（2026-11-03 用户反馈：滚到后面封面全不显示）──
+  // 根因：滚动时短时间触发大量懒加载请求，CDN 对并发做限流，失败的图
+  // 浏览器不会自动重试（img.onerror 后就是死的）。
+  // 实测：手动重新赋值 img.src 后 30/30 全部加载成功 → 说明 URL 没问题，
+  // 只是首轮被限流拒了。这里每 3 秒扫一次失败图，错峰重试（最多 3 次）。
+  var _imgRetry = {};
+  function retryBrokenCovers(){
+    try {
+      var imgs = document.querySelectorAll('img[src*="xhscdn"], img[src*="webpic"]');
+      var now = Date.now();
+      for (var i = 0; i < imgs.length; i++) {
+        var im = imgs[i];
+        // complete + naturalWidth=0 = 加载失败
+        if (!im.complete || im.naturalWidth > 0) continue;
+        var s = im.getAttribute('src') || '';
+        if (!s || s.indexOf('data:') === 0) continue;
+        var rec = _imgRetry[s];
+        if (!rec) { _imgRetry[s] = { n: 0, t: now }; continue; }
+        if (rec.n >= 3) continue;
+        // 错峰：每次重试间隔 3 秒，避免再次撞限流
+        if (now - rec.t < 3000) continue;
+        rec.n++; rec.t = now;
+        im.src = '';
+        im.src = s;
+      }
+    } catch(e) {}
+  }
   function tick(){
     try {
       if (!boardId) boardId = (location.pathname.match(/\/board\/([0-9a-f]{24})/) || [])[1] || '';
       scanState();
       scanBoardDom();
+      retryBrokenCovers();
       mountNav();
       // 登录态守卫：每秒采样一次，连续 2 拍一致才切换状态（防瞬时误判）
       checkLoginState();
@@ -2953,14 +2992,24 @@ pub fn run() {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(BACKEND_DEFAULT_PORT);
-            kill_port_orphans(startup_port);
+            // 端口上已有健康后端（典型：开发期源码后端先启动）→ 直接复用，
+            // 不杀不另起。health probe 打不通才清孤儿 + 拉 sidecar。
+            if backend_already_healthy(startup_port) {
+                println!(
+                    "端口 {} 已有健康 VidInsight 后端，复用它，不拉起 sidecar",
+                    startup_port
+                );
+                app.manage(SidecarHandle(Mutex::new(None)));
+            } else {
+                kill_port_orphans(startup_port);
 
-            // 启动 Sidecar 并把 child handle 存到 state，方便后续 restart_backend_sidecar 使用
-            let child = spawn_backend_sidecar(app.handle()).map_err(|e| {
-                eprintln!("Sidecar 启动失败: {}", e);
-                e
-            })?;
-            app.manage(SidecarHandle(Mutex::new(Some(child))));
+                // 启动 Sidecar 并把 child handle 存到 state，方便后续 restart_backend_sidecar 使用
+                let child = spawn_backend_sidecar(app.handle()).map_err(|e| {
+                    eprintln!("Sidecar 启动失败: {}", e);
+                    e
+                })?;
+                app.manage(SidecarHandle(Mutex::new(Some(child))));
+            }
 
             // 启动 ready probe：异步轮询本地 BACKEND_PORT 是否在监听，
             // 解决前端 useCheckBackend 在 PyInstaller 解压期瞎猜后端起没起的问题。
@@ -3197,6 +3246,13 @@ fn spawn_backend_sidecar(app_handle: &tauri::AppHandle) -> Result<CommandChild, 
     let enhanced_path = enhance_path_variable(&current_path, &additional_paths);
     all_env_vars.insert("PATH".to_string(), enhanced_path);
 
+    // 桌面端是单人本地应用，关掉 owner 隔离（2026-11-03）。
+    // 开着会出两个问题：① 用脚本/curl 提交的任务归到 legacy，桌面端历史里
+    // 看不见；② 老笔记 owner=legacy，而浏览器本地是随机 UUID，播放原片被
+    // 判成越权返回 404（实测视频明明在盘上却显示「保存原片」）。
+    // 网页端（Docker）不经过这里，保持默认开启，隔离行为不变。
+    all_env_vars.insert("OWNER_ISOLATION".to_string(), "0".to_string());
+
     let mut sidecar_command = app_handle
         .shell()
         .sidecar("VidInsightBackend")
@@ -3246,6 +3302,20 @@ fn spawn_backend_sidecar(app_handle: &tauri::AppHandle) -> Result<CommandChild, 
     });
 
     Ok(child)
+}
+
+// 探测端口上是否已有健康的 VidInsight 后端（sys_health 200）。
+// 有 → 直接复用，不再杀端口拉 sidecar。否则桌面端启动时 kill_port_orphans
+// 会把源码后端杀掉——2026-11-02 实测：桌面端一开，当天新功能/新笔记全部
+// 从界面消失，因为被切回了没有这些功能的旧 sidecar。
+fn backend_already_healthy(port: u16) -> bool {
+    match ureq::get(&format!("http://127.0.0.1:{}/api/sys_health", port))
+        .timeout(std::time::Duration::from_secs(2))
+        .call()
+    {
+        Ok(resp) => resp.status() == 200,
+        Err(_) => false,
+    }
 }
 
 // 清掉占用后端端口的孤儿进程（典型成因：应用更新/重启时旧实例没退干净，

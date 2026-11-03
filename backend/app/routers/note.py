@@ -62,6 +62,9 @@ class VideoRequest(BaseModel):
     style: str = None
     extras: Optional[str]=None
     video_understanding: Optional[bool] = False
+    keyframe_extract: Optional[bool] = False
+    # 归档原片到本地（离线回看用），会让任务多下载一次完整视频
+    archive_video: Optional[bool] = False
     video_interval: Optional[int] = 0
     grid_size: Optional[list] = []
     # 客户端（如浏览器插件）已经在用户浏览器里抓到字幕，直接传给后端复用，
@@ -135,7 +138,8 @@ def _persist_prefetched_transcript(task_id: str, transcript: dict) -> None:
 def run_note_task(task_id: str, video_url: str, platform: str, quality: DownloadQuality,
                   link: bool = False, screenshot: bool = False, model_name: str = None, provider_id: str = None,
                   _format: list = None, style: str = None, extras: str = None, video_understanding: bool = False,
-                  video_interval=0, grid_size=[]
+                  video_interval=0, grid_size=[], keyframe_extract: bool = False,
+                  archive_video: bool = False
                   ):
 
     if not model_name or not provider_id:
@@ -155,6 +159,8 @@ def run_note_task(task_id: str, video_url: str, platform: str, quality: Download
             extras=extras,
             screenshot=screenshot,
             video_understanding=video_understanding,
+        keyframe_extract=keyframe_extract,
+            archive_video=archive_video,
             video_interval=video_interval,
             grid_size=grid_size,
         )
@@ -322,7 +328,8 @@ def generate_note(data: VideoRequest, background_tasks: BackgroundTasks, request
 
         background_tasks.add_task(run_note_task, task_id, data.video_url, data.platform, data.quality, data.link,
                                   data.screenshot, data.model_name, data.provider_id, data.format, data.style,
-                                  data.extras, data.video_understanding, data.video_interval, data.grid_size)
+                                  data.extras, data.video_understanding, data.video_interval, data.grid_size,
+                                  data.keyframe_extract, data.archive_video)
         return R.success({"task_id": task_id})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -353,6 +360,26 @@ def get_task_status(task_id: str, request: Request):
             return [_sanitize(v) for v in obj]
         return obj
 
+    def _with_video(obj):
+        """给结果补上 video_url（2026-11-03 离线回看）。
+
+        视频在归档时被放到 note_results/{task_id}/video.mp4，挂在 /static
+        下不可见（note_results 不在 static 目录）。这里改用专门的路由
+        /api/task_video/{task_id} 提供，支持 Range 请求（拖动进度条）。
+        """
+        if not isinstance(obj, dict):
+            return obj
+        try:
+            from app.utils.path_helper import get_runtime_path
+            vp = Path(get_runtime_path("note_results")) / task_id / "video.mp4"
+            if vp.exists() and vp.stat().st_size > 100_000:
+                obj = dict(obj)
+                obj["video_url"] = f"/api/task_video/{task_id}"
+                obj["video_size"] = vp.stat().st_size
+        except Exception:
+            pass
+        return obj
+
     # 优先读状态文件
     if os.path.exists(status_path):
         with open(status_path, "r", encoding="utf-8") as f:
@@ -368,7 +395,7 @@ def get_task_status(task_id: str, request: Request):
                     result_content = json.load(rf)
                 return R.success({
                     "status": status,
-                    "result": _sanitize(result_content),
+                    "result": _with_video(_sanitize(result_content)),
                     "message": message,
                     "elapsed_s": status_content.get("elapsed_s"),
                     "stage_times": _sanitize(status_content.get("stage_times") or {}),
@@ -406,7 +433,7 @@ def get_task_status(task_id: str, request: Request):
             result_content = json.load(f)
         return R.success({
             "status": TaskStatus.SUCCESS.value,
-            "result": _sanitize(result_content),
+            "result": _with_video(_sanitize(result_content)),
             "task_id": task_id
         })
 
@@ -1239,3 +1266,254 @@ def build_image_prompt(data: ImagePromptRequest):
     except Exception as e:
         logger.error(f"配图提示词生成失败: {e}", exc_info=True)
         return R.error(msg=f"提示词生成失败: {str(e)[:120]}", err="IMAGE_PROMPT_FAILED")
+
+
+class BackfillKeyframeRequest(BaseModel):
+    task_id: str
+    provider_id: Optional[str] = None
+    model_name: Optional[str] = None
+
+
+@router.post("/note/backfill_keyframes")
+def backfill_keyframes(data: BackfillKeyframeRequest, background_tasks: BackgroundTasks,
+                       request: Request):
+    """给已有笔记补做关键画面抽取（2026-11-03）。
+
+    场景：用户当初生成笔记时没开「关键画面抽取」（因为慢），后来想补上。
+    这里复用已有的视频/转写产物，只跑「抽帧 + 视觉分析 + 追加到笔记」，
+    不重新下载、不重新转写、不重新总结。
+
+    前提：note_results 里该任务有 markdown + transcript；视频可能已被清理，
+    需要按 video_url 重新下载（1080p 分块并发，通常 10-30s）。
+    """
+    task_id = (data.task_id or "").strip()
+    if not task_id:
+        return R.error(msg="缺少 task_id", err="BACKFILL_NO_TASK")
+
+    _out_dir = Path(NOTE_OUTPUT_DIR)
+    note_json = _out_dir / f"{task_id}.json"
+    if not note_json.exists():
+        return R.error(msg="该笔记不存在或尚未生成完成", err="BACKFILL_NO_NOTE")
+
+    try:
+        raw = json.loads(note_json.read_text(encoding="utf-8"))
+    except Exception as e:
+        return R.error(msg=f"读取笔记失败: {e}", err="BACKFILL_READ_FAIL")
+
+    markdown = raw.get("markdown") or ""
+    if "## 关键画面信息" in markdown:
+        return R.error(msg="该笔记已有关键画面，无需补做", err="BACKFILL_ALREADY_DONE")
+
+    audio_meta = raw.get("audio_meta") or {}
+    video_url = audio_meta.get("webpage_url") or ""
+    # 老笔记没存 webpage_url，但都有 video_id + platform，可以还原链接。
+    # bilibili 的 video_id 就是 BV 号；小红书是 note_id。
+    if not video_url:
+        _vid = audio_meta.get("video_id") or ""
+        _pf = audio_meta.get("platform") or ""
+        if _vid and _pf == "bilibili":
+            video_url = f"https://www.bilibili.com/video/{_vid}/"
+        elif _vid and _pf == "xiaohongshu":
+            video_url = f"https://www.xiaohongshu.com/explore/{_vid}"
+        elif _vid and _pf == "youtube":
+            video_url = f"https://www.youtube.com/watch?v={_vid}"
+    if not video_url:
+        return R.error(msg="笔记里没有原视频链接，无法补做", err="BACKFILL_NO_URL")
+
+    # 只挑视觉模型
+    from app.services.note import NoteGenerator
+    ng = NoteGenerator()
+    provider_info, model_nm = ng._resolve_vision_model(
+        data.provider_id or "", data.model_name or "", None)
+    if not provider_info:
+        return R.error(msg="当前模型不支持读图，请在模型配置里勾选「图片」",
+                       err="BACKFILL_NO_VISION")
+
+    def _run():
+        try:
+            from app.services.keyframe_service import (
+                extract_keyframes, analyze_keyframes, get_bili_chapters,
+                frames_to_markdown, dedup_analyzed,
+            )
+            import os as _os
+            from pathlib import Path as _P
+
+            # 1. 准备视频：优先复用缓存，没有就重新下载
+            platform = audio_meta.get("platform") or "bilibili"
+            vid = audio_meta.get("video_id") or task_id[:8]
+            video_path = None
+            for cand in (_P("data") / f"{vid}.mp4", _P("data") / f"{vid}.webm"):
+                if cand.exists() and cand.stat().st_size > 100_000:
+                    video_path = cand
+                    break
+            if not video_path:
+                from app.downloaders.bilibili_downloader import BilibiliDownloader
+                from app.downloaders.xiaohongshu_downloader import XiaoHongShuDownloader
+                dl = XiaoHongShuDownloader() if platform == "xiaohongshu" else BilibiliDownloader()
+                p = dl.download_video(video_url, output_dir="data")
+                video_path = _P(p)
+
+            # 2. 抽帧 + 分析
+            frames_root = _out_dir.parent / "static"
+            frames_dir = str(frames_root / f"frames_{task_id[:8]}")
+            chapters = get_bili_chapters(video_url) if "bilibili.com" in video_url else []
+            candidate = extract_keyframes(str(video_path), frames_dir, chapters=chapters)
+
+            transcript_text = (raw.get("transcript") or {}).get("full_text") or ""
+            analyzed = analyze_keyframes(candidate, provider_info, model_nm,
+                                         transcript_text[:1500])
+            analyzed = dedup_analyzed(analyzed)
+            kf_md = frames_to_markdown(analyzed, url_prefix=f"/static/frames_{task_id[:8]}")
+            if chapters:
+                ch_lines = "\n".join(
+                    f"- {c['title']} ({int(c['from_s']//60):02d}:{int(c['from_s']%60):02d})"
+                    for c in chapters)
+                kf_md = f"\n## 视频章节\n\n{ch_lines}\n" + kf_md
+
+            # 3. 追加到已有笔记
+            raw["markdown"] = markdown.rstrip() + "\n\n" + kf_md
+            note_json.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+            # 同步落 markdown 文件
+            md_file = _out_dir / f"{task_id}_markdown.md"
+            if md_file.exists():
+                md_file.write_text(raw["markdown"], encoding="utf-8")
+            logger.info(f"补做关键帧完成: task {task_id[:8]} → {len(analyzed)} 帧")
+        except Exception as e:
+            logger.error(f"补做关键帧失败 (task={task_id[:8]}): {e}", exc_info=True)
+
+    background_tasks.add_task(_run)
+    return R.success(msg="已开始补做关键画面，稍后刷新笔记查看", data={"task_id": task_id})
+
+
+@router.api_route("/task_video/{task_id}", methods=["GET", "HEAD"])
+def get_task_video(task_id: str, request: Request):
+    """流式返回已归档的原片，支持 Range（进度条拖动 / 边下边播）。
+
+    2026-11-03：离线回看。视频归档在 note_results/{task_id}/video.mp4，
+    不在 static 目录下（那个目录只挂 static/），所以单独开路由。
+    FileResponse 自带 Range 支持（Starlette 实现），不用手写 206 逻辑。
+
+    必须同时挂 HEAD：前端播放器先用 HEAD 探测「这条笔记有没有归档原片」，
+    只注册 GET 时 FastAPI 对 HEAD 直接 405，探测永远失败，播放器不渲染。
+    """
+    from fastapi.responses import FileResponse
+    import re as _re
+
+    if not _re.fullmatch(r"[A-Za-z0-9_-]{8,64}", task_id or ""):
+        raise HTTPException(status_code=400, detail="无效的 task_id")
+
+    vp = Path(NOTE_OUTPUT_DIR) / task_id / "video.mp4"
+    if not vp.exists():
+        raise HTTPException(status_code=404, detail="该笔记没有归档视频")
+
+    # 越权校验：不同 owner 不能看别人的视频（与 task_status 同一套规则）。
+    # <video src="..."> 没法设置自定义请求头，所以额外支持 ?owner= query 参数，
+    # 否则浏览器里播放器永远拿 404（2026-11-03 实测）。
+    try:
+        from app.services.owner_isolation import owner_from_request, can_access
+        owner = request.query_params.get("owner") or owner_from_request(request)
+        if not can_access(NOTE_OUTPUT_DIR, task_id, owner):
+            raise HTTPException(status_code=404, detail="笔记不存在")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    return FileResponse(
+        str(vp),
+        media_type="video/mp4",
+        headers={"Accept-Ranges": "bytes", "Cache-Control": "private, max-age=86400"},
+    )
+
+
+class SaveVideoRequest(BaseModel):
+    task_id: str
+
+
+@router.post("/note/save_video")
+def save_video(data: SaveVideoRequest, background_tasks: BackgroundTasks,
+               request: Request):
+    """给已有笔记补存原片（2026-11-03）。
+
+    归档开关是后加的，此前 200+ 条老笔记都没留视频。这里让用户在笔记里
+    点一下「保存原片」就地补下：按笔记里的原链接重新下载（1080p 分块并发），
+    归档到 note_results/{task_id}/video.mp4，之后即可离线回看。
+
+    幂等：已有归档视频直接返回，不重复下载。
+    """
+    import re as _re
+
+    task_id = (data.task_id or "").strip()
+    if not _re.fullmatch(r"[A-Za-z0-9_-]{8,64}", task_id):
+        return R.error(msg="无效的 task_id", err="SAVE_VIDEO_BAD_ID")
+
+    # 越权校验必须放在最前面（含幂等分支之前）：否则别人的 task_id 会先
+    # 命中「原片已在本地」泄漏存在性，也绕过隔离。
+    try:
+        from app.services.owner_isolation import owner_from_request, can_access
+        if not can_access(NOTE_OUTPUT_DIR, task_id, owner_from_request(request)):
+            return R.error(msg="该笔记不存在或尚未生成完成", err="SAVE_VIDEO_NO_NOTE")
+    except Exception:
+        pass
+
+    _out_dir = Path(NOTE_OUTPUT_DIR)
+    dst = _out_dir / task_id / "video.mp4"
+    if dst.exists() and dst.stat().st_size > 100_000:
+        return R.success(msg="原片已在本地", data={"task_id": task_id, "already": True})
+
+    note_json = _out_dir / f"{task_id}.json"
+    if not note_json.exists():
+        return R.error(msg="该笔记不存在或尚未生成完成", err="SAVE_VIDEO_NO_NOTE")
+
+    try:
+        raw = json.loads(note_json.read_text(encoding="utf-8"))
+    except Exception as e:
+        return R.error(msg=f"读取笔记失败: {e}", err="SAVE_VIDEO_READ_FAIL")
+
+    audio_meta = raw.get("audio_meta") or {}
+    video_url = audio_meta.get("webpage_url") or ""
+    if not video_url:
+        _vid = audio_meta.get("video_id") or ""
+        _pf = audio_meta.get("platform") or ""
+        if _vid and _pf == "bilibili":
+            video_url = f"https://www.bilibili.com/video/{_vid}/"
+        elif _vid and _pf == "xiaohongshu":
+            video_url = f"https://www.xiaohongshu.com/explore/{_vid}"
+        elif _vid and _pf == "youtube":
+            video_url = f"https://www.youtube.com/watch?v={_vid}"
+    if not video_url:
+        return R.error(msg="笔记里没有原视频链接，无法保存原片", err="SAVE_VIDEO_NO_URL")
+
+    platform = audio_meta.get("platform") or "bilibili"
+
+    def _run():
+        try:
+            from events.handlers import archive_video
+            from app.downloaders.bilibili_downloader import BilibiliDownloader
+            from app.downloaders.xiaohongshu_downloader import XiaoHongShuDownloader
+
+            # 先看缓存里还有没有现成的视频（数据目录按 video_id 命名）
+            vid = audio_meta.get("video_id") or ""
+            video_path = None
+            if vid:
+                for ext in (".mp4", ".webm", ".mkv", ".flv"):
+                    cand = Path("data") / f"{vid}{ext}"
+                    if cand.exists() and cand.stat().st_size > 100_000:
+                        video_path = str(cand)
+                        break
+            if not video_path:
+                dl = (XiaoHongShuDownloader() if platform == "xiaohongshu"
+                      else BilibiliDownloader())
+                video_path = dl.download_video(video_url, output_dir="data")
+
+            archived = archive_video(str(video_path), task_id)
+            if archived:
+                logger.info(f"补存原片完成: task {task_id[:8]}")
+            else:
+                logger.warning(f"补存原片失败（归档返回空）: task {task_id[:8]}")
+        except Exception as e:
+            logger.error(f"补存原片失败 (task={task_id[:8]}): {e}", exc_info=True)
+
+    background_tasks.add_task(_run)
+    return R.success(msg="已开始保存原片，稍后刷新即可离线观看",
+                     data={"task_id": task_id})

@@ -68,6 +68,30 @@ logger = get_logger(__name__)
 # 直链带签名有时效，任务取用即清。
 _DIRECT_URL_STORE: dict = {}
 
+# 连接类失败的判定词：本机反代隧道断了、网关 5xx、DNS 解析不了。
+# 必须同时认中英文——Windows 报的是「由于目标计算机积极拒绝，无法连接」，
+# 不含 "refused" 这个词（2026-11-03 实测踩过）。
+_CONN_ERR_MARKERS = (
+    "refused", "connection", "connect", "unreachable", "timed out", "timeout",
+    "name or service not known", "getaddrinfo", "max retries",
+    "502", "503", "504", "bad gateway", "gateway time-out",
+    "拒绝", "无法连接", "连接失败", "连接被", "超时", "网络",
+)
+
+
+def _is_connection_failure(exc: BaseException) -> bool:
+    """判断异常是不是「供应商连不上」这类可换备用通道重试的失败。
+
+    只认连接/网关类，不认 4xx 参数错误（换模型也没用，还会浪费一次调用）。
+    """
+    text = f"{type(exc).__name__} {exc}".lower()
+    # 认证/参数类错误优先排除，避免被 "connection" 之类的宽泛词误伤
+    for deny in ("401", "403", "invalid api key", "authentication", "unauthorized",
+                 "invalid_request", "model not found"):
+        if deny in text:
+            return False
+    return any(m in text for m in _CONN_ERR_MARKERS)
+
 
 def put_direct_url(task_id: Optional[str], url: Optional[str],
                    title: Optional[str] = None, cover: Optional[str] = None) -> None:
@@ -123,6 +147,8 @@ class NoteGenerator:
         extras: Optional[str] = None,
         output_path: Optional[str] = None,
         video_understanding: bool = False,
+        keyframe_extract: bool = False,
+        archive_video: bool = False,
         video_interval: int = 0,
         grid_size: Optional[List[int]] = None,
     ) -> NoteResult | None:
@@ -209,7 +235,8 @@ class NoteGenerator:
             # 2. 下载音频/视频
             # 有字幕时只提取元信息，不下载音视频文件（除非需要截图/视频理解）
             has_transcript = transcript is not None
-            need_full_download = not has_transcript or screenshot or video_understanding
+            need_full_download = (not has_transcript or screenshot or video_understanding
+                                  or keyframe_extract or archive_video)
             audio_meta = self._download_media(
                 downloader=downloader,
                 video_url=video_url,
@@ -220,6 +247,8 @@ class NoteGenerator:
                 output_path=output_path,
                 screenshot=screenshot,
                 video_understanding=video_understanding,
+                keyframe_extract=keyframe_extract,
+                archive_video=archive_video,
                 video_interval=video_interval,
                 grid_size=grid_size,
                 skip_download=not need_full_download,
@@ -249,6 +278,80 @@ class NoteGenerator:
                     "【作者正文】\n" + desc.strip()[:2000] + "\n" + transcript.full_text)
                 logger.info(f"已将作者正文（{len(desc)} 字）注入总结材料")
 
+            # 2.8 关键画面抽取（2026-10-31）：视觉模型选帧并提取结构化信息
+            keyframe_md = ""
+            logger.info(f"[keyframe] 开关={keyframe_extract} video_path={self.video_path} exists={self.video_path.exists() if self.video_path else None}")
+            if keyframe_extract and self.video_path and self.video_path.exists():
+                try:
+                    from app.services.keyframe_service import (
+                        extract_keyframes, analyze_keyframes,
+                        get_bili_chapters, frames_to_markdown, dedup_analyzed,
+                    )
+                    self._update_status(task_id, TaskStatus.KEYFRAME,
+                        message="正在抽取关键画面…", stage_progress=0)
+                    # 视觉模型：优先用用户当前选的模型（需标记支持读图）。
+                    # 之前调 gpt._get_provider_info() 是空实现，一直静默走
+                    # VISION_* 环境变量默认值——用户换模型也不生效。
+                    # 先判能力再抽帧：没视觉能力就直接跳过，不白跑十几秒抽帧。
+                    provider_info, model_nm = self._resolve_vision_model(
+                        provider_id, model_name, gpt)
+                    if not provider_info:
+                        logger.warning(
+                            f"[keyframe] 模型 {model_name} 未标记视觉能力，跳过画面分析"
+                            f"（可在设置页勾选「支持读图」）")
+                        raise RuntimeError("__no_vision__")
+                    # 帧目录必须落在静态托管目录下，否则前端拿不到图（破图）。
+                    # 与截图同样走 /static 前缀 → /static/frames_<task>
+                    # 按 task_id 隔离：不同任务共用同一目录会互相覆盖，
+                    # 导致笔记里引用的图片张冠李戴（实测 u_0007 被后来的任务覆盖）
+                    _frames_root = Path(IMAGE_OUTPUT_DIR).parent
+                    frames_dir = str(_frames_root / f"frames_{task_id[:8]}")
+                    # 章节先取（零成本 API）：按章节时长分配名额、章内均匀抽帧，
+                    # 章节中段不再是盲区（实测只抽章节起点漏掉 8 帧全在中段）
+                    chapters = get_bili_chapters(video_url) if "bilibili.com" in video_url else []
+                    candidate = extract_keyframes(
+                        str(self.video_path), frames_dir,
+                        chapters=chapters)
+                    # 转录上下文给视觉模型做判断参考
+                    ctx_hint = transcript.full_text[:1500] if transcript else ""
+
+                    # 逐帧进度上报（前端进度条「画面解析」那一步的百分比）
+                    def _kf_progress(done_n: int, total_n: int) -> None:
+                        pct = int(done_n * 100 / max(total_n, 1))
+                        self._update_status(
+                            task_id, TaskStatus.KEYFRAME,
+                            message=f"画面解析中 {done_n}/{total_n} 帧",
+                            stage_progress=pct,
+                        )
+
+                    analyzed = analyze_keyframes(
+                        candidate, provider_info, model_nm, ctx_hint,
+                        on_progress=_kf_progress)
+                    analyzed = dedup_analyzed(analyzed)
+                    keyframe_md = frames_to_markdown(
+                        analyzed, url_prefix=f"/static/frames_{task_id[:8]}")
+                    if chapters:
+                        ch_lines = "\n".join(
+                            f"- {c['title']} ({int(c['from_s']//60):02d}:{int(c['from_s']%60):02d})"
+                            for c in chapters)
+                        keyframe_md = f"\n## 视频章节\n\n{ch_lines}\n" + keyframe_md
+                    if keyframe_md:
+                        logger.info(f"关键帧抽取完成: {len(analyzed)} 帧留存, {len(chapters)} 章节")
+                except Exception as kf_exc:
+                    logger.warning(f"关键帧抽取失败（不影响主流程）: {kf_exc}")
+
+            # 2.9 视频归档（2026-11-03）：把下载的视频留到笔记目录，
+            # 供用户在笔记页直接回看（离线也能看）。必须在关键帧之后——
+            # 关键帧还要读视频文件。归档后原文件由 cleanup 事件删除。
+            if self.video_path and Path(self.video_path).exists():
+                try:
+                    from events.handlers import archive_video
+                    archived = archive_video(str(self.video_path), task_id)
+                    if archived:
+                        logger.info(f"视频已归档，可在笔记页直接播放: {archived}")
+                except Exception as _e:
+                    logger.warning(f"视频归档失败（不影响主流程）: {_e}")
+
             # 3. GPT 总结
             markdown = self._summarize_text(
                 audio_meta=audio_meta,
@@ -263,6 +366,10 @@ class NoteGenerator:
                 video_img_urls=self.video_img_urls,
                 task_id=task_id,
             )
+
+            # 关键帧图文追加到正文末尾
+            if keyframe_md:
+                markdown = markdown + "\n" + keyframe_md
 
             # 4. 截图 & 链接替换
             if _format:
@@ -529,6 +636,8 @@ class NoteGenerator:
         video_interval: int,
         grid_size: List[int],
         skip_download: bool = False,
+        keyframe_extract: bool = False,
+        archive_video: bool = False,
     ) -> AudioDownloadResult | None:
         """
         1. 检查音频缓存；若不存在，则根据需要下载音频或视频（若需截图/可视化）。
@@ -567,13 +676,18 @@ class NoteGenerator:
                 yield
 
         # 已有缓存，尝试加载
-        if audio_cache_file.exists():
+        # 注意：需要视频（截图/缩略图/关键帧）时不能走缓存短路——
+        # 缓存只记音频路径，video_path 是 None，抽帧会全部跳过。
+        _needs_video = screenshot or video_understanding or keyframe_extract
+        if audio_cache_file.exists() and not _needs_video:
             logger.info(f"检测到音频缓存 ({audio_cache_file})，直接读取")
             try:
                 data = json.loads(audio_cache_file.read_text(encoding="utf-8"))
                 return AudioDownloadResult(**data)
             except Exception as e:
                 logger.warning(f"读取音频缓存失败，将重新下载：{e}")
+        elif audio_cache_file.exists() and _needs_video:
+            logger.info("检测到音频缓存，但本次需要视频（截图/缩略图/关键帧），重新下载")
 
         # 有字幕且不需要截图/视频理解时，只提取元信息不下载文件
         if skip_download:
@@ -596,7 +710,7 @@ class NoteGenerator:
                 logger.warning(f"元信息提取失败，将尝试完整下载: {exc}")
 
         # 判断是否需要下载视频
-        need_video = screenshot or video_understanding
+        need_video = screenshot or video_understanding or keyframe_extract or archive_video
         if screenshot and not grid_size:
             grid_size = [2, 2]
 
@@ -604,8 +718,49 @@ class NoteGenerator:
         if need_video:
             try:
                 logger.info("开始下载视频")
-                with _download_scope():
-                    video_path_str = downloader.download_video(video_url)
+                video_path_str = None
+                try:
+                    with _download_scope():
+                        video_path_str = downloader.download_video(video_url)
+                except Exception as dl_exc:
+                    # B站 412 风控会把 yt-dlp 拦死 → 直接走 hellotik 直链
+                    # （playwright 驱动 hellotik.app，真人操作拿 CDN 直链）
+                    if "bilibili.com" in str(video_url) or "b23.tv" in str(video_url):
+                        logger.warning(f"yt-dlp 下载视频失败，改用 hellotik 直链：{str(dl_exc)[:100]}")
+                        from app.services.hellotik_local import parse_direct_url
+                        hk = parse_direct_url(str(video_url))
+                        if not hk.get("success"):
+                            raise Exception(f"hellotik 解析失败: {hk.get('reason')}") from dl_exc
+                        direct = hk["video_url"]
+                        # 用 download_direct 落盘（它保留 mp4 并抽 mp3）
+                        import hashlib
+                        from app.utils.url_parser import extract_video_id
+                        vid = extract_video_id(str(video_url), "bilibili") or hashlib.md5(
+                            direct.encode()).hexdigest()[:12]
+                        os.makedirs(output_path or ".", exist_ok=True)
+                        vpath = os.path.join(output_path or ".", f"{vid}.mp4")
+                        if not os.path.exists(vpath):
+                            import requests as _rq
+                            with _rq.get(direct, headers={
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                                              "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                                "Referer": "https://www.bilibili.com",
+                            }, stream=True, timeout=120) as _r:
+                                _r.raise_for_status()
+                                with open(vpath, "wb") as _f:
+                                    for _c in _r.iter_content(1024 * 256):
+                                        if _c:
+                                            _f.write(_c)
+                        video_path_str = vpath
+                        logger.info(f"hellotik 直链下载成功：{vpath}")
+                # 非 B 站（小红书/抖音等）下载失败时 video_path_str 仍是 None，
+                # 直接 Path(None) 会抛 "cannot access local variable" 这种
+                # 毫无信息量的错误（实测小红书链接触发）。这里给明确原因。
+                if not video_path_str:
+                    raise RuntimeError(
+                        "视频下载失败：当前平台没有可用的视频源（关键帧抽取需要视频文件）。"
+                        "请检查链接是否可访问，或关闭「关键画面抽取」后重试。"
+                    )
                 self.video_path = Path(video_path_str)
                 logger.info(f"视频下载完成：{self.video_path}")
 
@@ -631,6 +786,49 @@ class NoteGenerator:
         # 下载音频
         try:
             logger.info("开始下载音频")
+            # 短路：关键帧/截图流程已经把完整视频下到盘上（含音轨），
+            # 这时不必再调平台 API 取音频——小红书 xsec_token 过期时
+            # 视频能靠 hellotik 拿到，但音频 API 会 400101 直接炸掉整个任务。
+            # 从已下载的 mp4 直接抽 mp3，既快又绕开 token 依赖。
+            _vp = getattr(self, "video_path", None)
+            if _vp and Path(_vp).exists() and Path(_vp).stat().st_size > 100_000:
+                try:
+                    mp3_path = str(Path(output_path or ".") / f"{Path(_vp).stem}.mp3")
+                    if not (Path(mp3_path).exists() and Path(mp3_path).stat().st_size > 1000):
+                        import subprocess as _sp
+                        _sp.run(
+                            ["ffmpeg", "-y", "-i", str(_vp), "-vn",
+                             "-acodec", "libmp3lame", "-b:a", "64k", mp3_path],
+                            check=True, capture_output=True, timeout=180,
+                        )
+                    _dur = 0.0
+                    try:
+                        _probe = _sp.run(
+                            ["ffprobe", "-v", "quiet", "-print_format", "json",
+                             "-show_format", str(_vp)],
+                            capture_output=True, text=True, timeout=30,
+                        )
+                        import json as _json
+                        _dur = float(_json.loads(_probe.stdout)["format"]["duration"])
+                    except Exception:
+                        pass
+                    from app.models.audio_model import AudioDownloadResult as _ADR
+                    audio = _ADR(
+                        file_path=mp3_path,
+                        title=getattr(self, "video_title", "") or Path(_vp).stem,
+                        duration=_dur,
+                        cover_url=getattr(self, "video_cover", "") or "",
+                        platform=platform,
+                        video_id=Path(_vp).stem,
+                        raw_info={"engine": "local_video_extract"},
+                        video_path=str(_vp),
+                    )
+                    audio_cache_file.write_text(
+                        json.dumps(asdict(audio), ensure_ascii=False, indent=2), encoding="utf-8")
+                    logger.info(f"从已下载视频提取音频成功（跳过平台 API）: {mp3_path}")
+                    return audio
+                except Exception as _e:
+                    logger.warning(f"从本地视频提音频失败，回退平台 API: {_e}")
             with _download_scope():
                 audio = downloader.download(
                     video_url=video_url,
@@ -854,6 +1052,24 @@ class NoteGenerator:
             raise
         except Exception as exc:
             logger.error(f"GPT 总结失败：{exc}")
+            # 供应商连接类失败（本机反代隧道断了/网关 5xx）时自动换备用供应商重试。
+            # 网页版首模型常挂在「用户自己电脑上的反代」上，机器关机就会整任务失败；
+            # 有备用通道时不该让用户看到失败。
+            if _is_connection_failure(exc):
+                fb = self._get_fallback_gpt(gpt)
+                if fb is not None:
+                    logger.warning(f"主模型连接失败，自动切换备用模型重试 (task={task_id[:8]})")
+                    try:
+                        markdown = fb.summarize(source)
+                        markdown_cache_file.write_text(markdown, encoding="utf-8")
+                        logger.info(f"备用模型总结成功 ({markdown_cache_file})")
+                        return markdown
+                    except TaskCancelled:
+                        raise
+                    except Exception as exc2:
+                        logger.error(f"备用模型总结也失败：{exc2}")
+                        self._handle_exception(task_id, exc2)
+                        exc = exc2
             self._handle_exception(task_id, exc)
             # 供应商网关/超时类错误翻译成注册表错误码（否则 504 的整页 HTML 会透给用户）
             from app.utils.llm_error import classify_llm_error
@@ -863,6 +1079,101 @@ class NoteGenerator:
                     spec.code, spec.message, err=spec.err,
                     detail={"provider_error": str(exc)[:200]}) from exc
             raise
+
+    def _get_fallback_gpt(self, primary: GPT) -> Optional[GPT]:
+        """选一个与主模型不同的可用供应商，用于连接失败时兜底。
+
+        优先 Systalyze（云端，不依赖本机），其次任一已配 Key 的其它供应商。
+        找不到就返回 None（调用方保持原错误）。
+        """
+        try:
+            from app.services.provider import ProviderService
+            providers = ProviderService.get_all_providers() or []
+        except Exception as e:
+            logger.warning(f"[fallback] 读取供应商列表失败: {e}")
+            return None
+
+        primary_key = (getattr(primary, "api_key", "") or "")[:12]
+        primary_base = (getattr(primary, "base_url", "") or "").lower()
+
+        usable = []
+        for p in providers:
+            if not p or p.get("enabled") == 0:
+                continue
+            key = (p.get("api_key") or "").strip()
+            base = (p.get("base_url") or "").lower()
+            if not key or not base:
+                continue
+            # 跳过主模型自己
+            if base == primary_base and key[:12] == primary_key:
+                continue
+            usable.append(p)
+        if not usable:
+            return None
+
+        # Systalyze 优先（云端直连，最稳）
+        usable.sort(key=lambda p: 0 if "systalyze" in (p.get("base_url") or "").lower() else 1)
+
+        for p in usable:
+            try:
+                # 该供应商下挑一个模型：优先 deepseek 系列
+                from app.db.model_dao import get_models_by_provider
+                models = get_models_by_provider(p["id"]) or []
+                if not models:
+                    continue
+                names = [m.get("model_name") or "" for m in models]
+                pick = next((n for n in names if "deepseek" in n.lower()), names[0])
+                logger.info(f"[fallback] 使用备用供应商 {p.get('name')} / {pick}")
+                return self._get_gpt(pick, str(p["id"]))
+            except Exception as e:
+                logger.warning(f"[fallback] 构建备用 GPT 失败 ({p.get('name')}): {e}")
+                continue
+        return None
+
+    def _resolve_vision_model(self, provider_id: str, model_name: str, gpt):
+        """选出可用来读图的模型，返回 (provider_info, model_name)。
+
+        优先级：
+        1. 用户当前选的模型，且能力标记里 image=true
+        2. 该供应商下任一标记了 image=true 的模型
+        3. 兜底：VISION_* 环境变量指向的反代（未配置能力标记时保持旧行为，
+           避免老用户升级后关键帧功能直接不可用）
+
+        返回 (None, "") 表示明确没有可用视觉模型。
+        """
+        try:
+            from app.db.model_dao import get_model_by_provider_and_name, get_models_by_provider
+            from app.db.provider_dao import get_provider_by_id
+            prov = get_provider_by_id(provider_id) if provider_id else None
+            if prov:
+                # DAO 返回 ORM 对象，不是 dict
+                info = {"base_url": getattr(prov, "base_url", "") or "",
+                        "api_key": getattr(prov, "api_key", "") or ""}
+                # 能力标记有两种格式：老版 {"image": true}、新版
+                # {"inputFormat": {"supportsImage": true}}。之前只认老的，
+                # 新版永远判 false → 一直走兜底 127.0.0.1（容器里不通）。
+                def _can_read_image(caps) -> bool:
+                    c = caps or {}
+                    if c.get("image"):
+                        return True
+                    return bool((c.get("inputFormat") or {}).get("supportsImage"))
+
+                rec = get_model_by_provider_and_name(provider_id, model_name) if model_name else None
+                if rec and _can_read_image(rec.get("capabilities")):
+                    return info, model_name
+                # 该供应商下有没有别的视觉模型
+                for m in get_models_by_provider(provider_id):
+                    if _can_read_image(m.get("capabilities")):
+                        return info, m["model_name"]
+        except Exception as e:
+            logger.warning(f"[keyframe] 查模型能力失败: {e}")
+
+        # 兜底：环境变量配置的视觉反代（未打能力标记时的兼容路径）
+        from app.services.keyframe_service import VISION_BASE_URL, VISION_API_KEY, VISION_MODEL
+        if VISION_BASE_URL and VISION_MODEL:
+            logger.info(f"[keyframe] 模型未标记视觉能力，回退到 {VISION_MODEL}")
+            return {"base_url": VISION_BASE_URL, "api_key": VISION_API_KEY or ""}, VISION_MODEL
+        return None, ""
 
     def _post_process_markdown(
         self,

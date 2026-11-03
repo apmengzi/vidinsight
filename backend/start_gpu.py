@@ -28,4 +28,9 @@ import uvicorn  # noqa: E402
 if __name__ == "__main__":
     port = int(os.getenv("BACKEND_PORT", 8483))
     host = os.getenv("BACKEND_HOST", "0.0.0.0")
+    # 源码直起 = 本机单人使用，关掉 owner 隔离（2026-11-03）。
+    # 开着会：脚本/curl 提交的任务归 legacy → 桌面端历史看不见；
+    # 老笔记 owner=legacy 而浏览器是随机 UUID → 播放原片被判越权 404。
+    # 公开部署走 Docker，不经过这个入口，隔离仍默认开启。
+    os.environ.setdefault("OWNER_ISOLATION", "0")
     uvicorn.run(main.app, host=host, port=port, reload=False)

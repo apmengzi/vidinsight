@@ -26,7 +26,9 @@ import TranscriptViewer from '@/pages/HomePage/components/transcriptViewer.tsx'
 import MarkmapEditor from '@/pages/HomePage/components/MarkmapComponent.tsx'
 import ChatPanel from '@/pages/HomePage/components/ChatPanel.tsx'
 import VideoBanner from '@/pages/HomePage/components/VideoBanner.tsx'
+import NoteVideoPlayer from '@/pages/HomePage/components/NoteVideoPlayer.tsx'
 import { resolveAssetUrl } from '@/utils/image-url.ts'
+import { backfillKeyframes } from '@/services/note.ts'
 
 interface VersionNote {
   ver_id: string
@@ -433,9 +435,17 @@ function createMarkdownComponents(tocLookup: TocLookup) {
     },
     img: ({ node, ...props }: any) => {
       const src = resolveAssetUrl(props.src)
+      // 关键帧是"信息图"（参数表/原理图/清单），必须完整、比例正确、随窗口自适应：
+      // - object-cover 裁边 → 用 contain
+      // - 固定像素（900px）不随窗口变：实测 viewport 1100~2400 恒为 900px，
+      //   窄窗口溢出、宽窗口偏小
+      // - 纯百分比在 Zoom 容器里会撑满（曾出现 1334px）
+      // 解法：width:100% + max-width:min(正文栏100%, 1100px)，父级已限宽所以安全，
+      // 再加 700px 下限保证窄窗口不缩到读不清
+      const isKeyframe = typeof src === 'string' && src.includes('/frames_')
 
       return (
-        <div className="my-8 flex justify-center">
+        <div className="my-6 flex justify-center">
           <Zoom>
             <img
               {...props}
@@ -445,8 +455,23 @@ function createMarkdownComponents(tocLookup: TocLookup) {
               onError={(event) => {
                 event.currentTarget.style.display = 'none'
               }}
-              className="max-w-full cursor-zoom-in rounded-lg object-cover shadow-md transition-all hover:shadow-lg"
-              style={{ maxHeight: '500px' }}
+              className={`cursor-zoom-in rounded-lg bg-[var(--vi-hover)] shadow-md transition-all hover:shadow-lg ${
+                isKeyframe ? 'h-auto w-full object-contain' : 'max-w-full object-cover'
+              }`}
+              style={
+                isKeyframe
+                  ? {
+                      // 关键帧完整显示：不裁切、不变形、不超出阅读栏。
+                      // max-width:100% 相对的是 .markdown-body，容器已限宽
+                      // （见下方 px-4 容器），所以这里安全。
+                      width: 'auto',
+                      maxWidth: '100%',
+                      height: 'auto',
+                      display: 'block',
+                      margin: '0 auto',
+                    }
+                  : { maxHeight: '500px' }
+              }
             />
           </Zoom>
         </div>
@@ -541,8 +566,11 @@ function createMarkdownComponents(tocLookup: TocLookup) {
       )
     },
     table: ({ children, ...props }: any) => (
-      <div className="my-6 w-full overflow-y-auto">
-        <table className="w-full border-collapse text-sm" {...props}>
+      // 宽表格（参数对比表常见 7-8 列）会撑破阅读栏，导致整个页面横向溢出、
+      // 图片被挤出视口。这里用 overflow-x-auto 让表格自己横向滚动，
+      // 同时 max-w-full 保证容器不超出阅读栏。
+      <div className="my-6 w-full max-w-full overflow-x-auto">
+        <table className="w-full min-w-max border-collapse text-sm" {...props}>
           {children}
         </table>
       </div>
@@ -927,6 +955,24 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
         setShowChat={setShowChat}
         viewMode={viewMode}
         setViewMode={setViewMode}
+        hasKeyframes={processedContent.includes('## 关键画面信息')}
+        onBackfillKeyframes={async () => {
+          const tid = currentTask?.id
+          if (!tid) {
+            toast.error('找不到任务 ID')
+            return
+          }
+          try {
+            const res: any = await backfillKeyframes(tid)
+            if (res?.code === 0) {
+              toast.success('已开始补做关键画面，约 2-5 分钟后刷新查看')
+            } else {
+              toast.error(res?.msg || '补做失败')
+            }
+          } catch (e: any) {
+            toast.error(e?.msg || e?.message || '补做失败')
+          }
+        }}
       />
 
       {viewMode === 'map' ? (
@@ -952,10 +998,29 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
               <>
               <div ref={readerRef} className="flex min-w-0 flex-1 overflow-hidden">
                 <ScrollArea className="min-w-0 flex-1">
-                  <div className="px-4 pt-6 xl:px-6">
+                  {/* 阅读栏宽度约束（2026-11-02 实测修复）：
+                      原来这个 div 没有宽度约束，内容（宽表格/大图）把容器撑到
+                      1382px，而 ScrollArea viewport 只有 580-1580px（随窗口变），
+                      超出部分被 overflow-hidden 裁掉——图片右侧被切就是这么来的。
+                      用 w-full + max-w-full + box-border 保证容器永远不超视口；
+                      外层再加 min-w-0 防止 flex 子项被内容撑开。 */}
+                  <div className="mx-auto box-border w-full max-w-[860px] min-w-0 px-4 pt-6 xl:px-6">
                     <VideoBanner
                       audioMeta={currentTask?.audioMeta}
                       videoUrl={currentTask?.formData?.video_url}
+                    />
+
+                    {/* 原片回看（2026-11-03）：视频已归档到本地，断网也能播。
+                        URL 由 taskId 直接拼（/api/task_video/{taskId}），
+                        组件内部会先探测可用性，没有归档视频就不渲染。 */}
+                    <NoteVideoPlayer
+                      taskId={currentTask?.id}
+                      poster={currentTask?.audioMeta?.cover_url}
+                      duration={normalizeDurationSeconds(
+                        currentTask?.audioMeta?.duration,
+                        currentTask?.audioMeta?.platform || currentTask?.formData?.platform,
+                      )}
+                      title={currentTask?.audioMeta?.title}
                     />
 
                     {/* 体验面③：简报封头（衬线大标题 + mono 元数据阵列） */}
@@ -977,7 +1042,14 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
                       taskId={currentTask?.id}
                     />
 
-                    <div className={'markdown-body w-full px-0'}>
+                    {/* 关键：.markdown-body 必须自己限宽。
+                        max-w-full 是相对父级算的，父级被内容撑到 1382px 时它也跟着撑，
+                        所以图片宽度永远收不住（实测 1334px 全溢出）。
+                        这里给死上限 860px（长文最舒适阅读宽度），并 overflow-x-hidden
+                        兜底，宽表格由 table 自己的 overflow-x-auto 横向滚动。 */}
+                    <div
+                      className={'markdown-body w-full max-w-[860px] overflow-x-hidden px-0'}
+                    >
                       <ReactMarkdown
                         remarkPlugins={remarkPlugins}
                         rehypePlugins={rehypePlugins}

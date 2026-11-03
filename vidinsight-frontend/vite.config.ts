@@ -37,8 +37,17 @@ export default defineConfig(({ mode }) => {
   const port = parseInt(env.VITE_FRONTEND_PORT || '3015', 10)
   const appVersion = env.VITE_APP_VERSION || process.env.VITE_APP_VERSION || readAppVersion()
 
+  // 资源路径前缀（2026-11-03 修 SPA 深链白屏）：
+  // - 网页版走 BrowserRouter，用户直接打开 /history/<id> 时页面在子路径下，
+  //   若 base 是 './'，浏览器把 './assets/x.js' 解析成 '/history/assets/x.js'
+  //   → nginx try_files 找不到就回 index.html → MIME text/html → 模块脚本被拒 → 白屏。
+  // - 桌面端（Tauri）走 file:// 协议，必须用相对路径 './' 才能加载资源。
+  // 判据用 mode：tauri.conf.json 的 beforeBuildCommand 是 `npm run build -- --mode tauri`。
+  const isTauriBuild = mode === 'tauri'
+  const base = isTauriBuild ? './' : '/'
+
   return {
-    base: './',
+    base,
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
     },
