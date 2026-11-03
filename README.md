@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./doc/icon.svg" alt="VidInsight Logo" width="60" height="60" />
   <h1>VidInsight</h1>
-  <p><i>AI 视频笔记生成 + Agent 知识库问答，让 AI 真正理解你的视频</i></p>
+  <p><i>AI 视频笔记生成 + Agent 知识库问答，让 AI 帮你管理你的收藏夹</i></p>
 
   <p>
     <img src="https://img.shields.io/badge/license-MIT-blue.svg" />
@@ -15,7 +15,7 @@
   <h3>
     🚀 <a href="https://video.apmengzi.online"><b>在线体验 → video.apmengzi.online</b></a>
   </h3>
-  <p><i>打开即用，粘贴 B 站链接即可生成笔记</i></p>
+  <p><i>打开即用，粘贴视频链接即可生成笔记</i></p>
 </div>
 
 ## 在线试用
@@ -25,9 +25,10 @@
 后端跑在国内工作站上，CPU 转写（faster-whisper small / int8 / 20 线程），实测 **40 分钟视频从贴链接到出完整笔记约 100 秒**。
 
 > 当前能力与限制：
-> - B 站链接全支持（经 hellotik 直链解析，绕过平台风控；小红书、抖音、快手亦可用）
-> - **无需配置 API Key**，服务端已接入百灵 AntLing 模型
+> - **多平台支持**：B 站、小红书、抖音、快手、YouTube 均可贴链接生成笔记
+> - **无需配置 API Key**，服务端已接入可用模型
 > - 多线程 CPU 转写，长视频约 1~2 分钟出结果
+> - 可选开启「关键画面抽取」：自动截取视频里的参数表、清单、原理图、描点站位，转成表格写进笔记（会让任务慢 3-5 倍，按需开启）
 > - 任务历史按浏览器隔离（匿名 ID 存 localStorage），不同人互不可见；清缓存或换设备会变成新身份
 > - 服务部署在国内，访问速度快
 >
@@ -36,21 +37,21 @@
 
 ---
 
-> **VidInsight 基于 [VidInsight](https://github.com/JefferyHcool/VidInsight) v2.4.0 二次开发**，在原有视频笔记生成能力之上，新增了自主设计的 **VidInsightAgent ReAct Agent 系统**，支持跨视频知识库的 AI 深度问答（BM25 + Function Calling），并配套浏览器插件实现一站式视频学习工作流。
+> **VidInsight 在 [BiliNote](https://github.com/JefferyHcool/BiliNote) v2.4.0 的基础上重构而来**。原项目的下载器骨架、多平台适配层与转写引擎接入是起点；当前版本的笔记生成管线、关键画面抽取、Agent 问答层（ReAct 循环 + 混合检索知识库）与桌面端均为重新设计实现。感谢上游作者的开源工作。
 
 ## ✨ 核心特性
 
-### 继承自 VidInsight
+### 继承自 BiliNote
 
-- **多平台支持**：Bilibili、YouTube、抖音、快手、本地视频
+- **多平台支持**：Bilibili、YouTube、抖音、快手、小红书、本地视频
 - **AI 笔记生成**：LLM 自动提取视频内容，生成结构化 Markdown 笔记
-- **多模态理解**：支持视频截图 + 音频转写融合理解
 - **灵活配置**：自行配置 LLM 供应商（OpenAI / DeepSeek / Qwen 等）和转写引擎（Fast-Whisper / MLX-Whisper / Groq / BCut 等）
 - **桌面客户端**：Windows + macOS Tauri 桌面应用
 - **笔记历史管理**：多版本记录保留，任务历史回看
 
 ### VidInsight 新增
 
+- **🖼️ 关键画面抽取**：自动截取视频里的参数对比表、食材清单、原理图、游戏描点站位——这些信息只存在于画面、音频和字幕念不出来。抽帧 → 视觉模型逐帧判定 → 转成表格与原图一起写进笔记
 - **🧠 VidInsightAgent ReAct Agent**：自主设计的 Agent 系统，非 LangChain/LlamaIndex 等第三方框架，基于 OpenAI Function Calling 协议实现 Thought-Action-Observation 循环
 - **🔍 跨视频知识库问答 (RAG)**：对已生成的所有笔记进行统一索引（BM25 + 可选向量搜索 + 可选 BGE Reranker），Agent 自动调用 `search_kb` / `get_source` / `list_notes` 工具在知识库中检索
 - **⚡ 浏览器插件（MV3）**：Chrome / Edge / Firefox，支持 popup 一键生成、视频页悬浮按钮、右键菜单、侧边栏 AI 问答、Cookie 同步
@@ -94,19 +95,15 @@ VidInsight/
 
 ## 📸 截图预览
 
-![screenshot](./doc/image1.png)
-![screenshot](./doc/image3.png)
-![screenshot](./doc/image.png)
-![screenshot](./doc/image4.png)
-![screenshot](./doc/image5.png)
+> 截图待补充（历史截图来自上游 BiliNote 版本，已移除以免误导）。
 
 ## 🚀 快速开始
 
 ### 方式一：Docker 部署（推荐）
 
 ```bash
-git clone https://github.com/JefferyHcool/VidInsight.git
-cd VidInsight
+git clone https://github.com/apmengzi/vidinsight.git
+cd vidinsight
 cp .env.example .env
 
 # 标准部署
@@ -237,12 +234,15 @@ BASE_REGISTRY=docker.m.daocloud.io docker-compose build
 
 ## 🔗 项目来源
 
-本项目基于 [VidInsight](https://github.com/JefferyHcool/VidInsight) v2.4.0 二次开发，感谢原作者的杰出工作。
+本项目在 [BiliNote](https://github.com/JefferyHcool/BiliNote) v2.4.0 基础上重构而来，感谢上游作者的开源工作。
 
 主要改动：
-- 新增 `VidInsightAgent` ReAct Agent 系统（`backend/app/services/agent.py`）
-- 新增统一知识库检索（`backend/app/services/knowledge_base.py`）
+- 重构笔记生成管线（`backend/app/services/note.py`）：自适应章节结构、断点续跑、错误分类
+- 新增关键画面抽取（`backend/app/services/keyframe_service.py`）：定点抽帧 → 视觉逐帧分析 → 图文混排
+- 新增 `CyberStomachAgent` ReAct Agent 系统（`backend/app/services/agent.py`）
+- 新增统一知识库检索（`backend/app/services/knowledge_base.py`，BM25 + 向量混合 RRF）
 - 新增 Agent 工具系统（`backend/app/services/agent_tools.py`）
+- 下载层重构：1080p 上限 + 分块并发、hellotik 兜底解析
 - 浏览器插件完善（ChatPanel with Agent Q&A、source citations、timeout handling）
 - 前后端品牌重命名为 VidInsight
 
