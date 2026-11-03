@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Copy, Download, BrainCircuit, MessageSquare } from 'lucide-react'
+import { Copy, Download, BrainCircuit, MessageSquare, ImagePlus, ImageDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -50,6 +50,14 @@ interface NoteHeaderProps {
   setShowChat?: (mode: false | 'half' | 'full') => void
   viewMode: 'map' | 'preview'
   setViewMode: (mode: 'map' | 'preview') => void
+  /** 笔记是否已含关键画面（有就不显示补做按钮） */
+  hasKeyframes?: boolean
+  /** 补做关键画面（异步，完成后需刷新） */
+  onBackfillKeyframes?: () => Promise<void> | void
+  /** 生成一图流（LLM 通读整篇笔记提炼后排版成竖图） */
+  onOnePager?: () => Promise<void> | void
+  /** 一图流生成中 */
+  onePagerBusy?: boolean
 }
 
 /* ═══════════════════════════════════════════════════
@@ -207,8 +215,13 @@ export function MarkdownHeader({
   setShowChat,
   viewMode,
   setViewMode,
+  hasKeyframes,
+  onBackfillKeyframes,
+  onOnePager,
+  onePagerBusy,
 }: NoteHeaderProps) {
   const [copied, setCopied] = useState(false)
+  const [backfilling, setBackfilling] = useState(false)
 
   useEffect(() => {
     let timer: NodeJS.Timeout
@@ -330,6 +343,30 @@ export function MarkdownHeader({
           </Tooltip>
         </TooltipProvider>
 
+        {/* 一图流：LLM 通读整篇笔记 → 提炼要点 → 排版成竖版长图。
+            文字由代码渲染，100% 准确；LLM 不可用时后端自动降级为本地抽取 */}
+        {onOnePager && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => onOnePager()}
+                  disabled={onePagerBusy}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2"
+                >
+                  <ImageDown className={`mr-1.5 h-4 w-4 ${onePagerBusy ? 'animate-pulse' : ''}`} />
+                  <span className="text-sm">{onePagerBusy ? '生成中…' : '一图流'}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                把整篇笔记提炼成一张竖版信息图（文字准确，可下载分享）
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -341,6 +378,39 @@ export function MarkdownHeader({
             <TooltipContent>下载为 Markdown 分析报告</TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        {/* 补做关键画面：只在笔记还没有关键画面时出现。
+            场景——当初生成时没开（该功能慢 3-5 倍），后来想补上 */}
+        {onBackfillKeyframes && !hasKeyframes && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={async () => {
+                    setBackfilling(true)
+                    try {
+                      await onBackfillKeyframes()
+                    } finally {
+                      setBackfilling(false)
+                    }
+                  }}
+                  disabled={backfilling}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2"
+                >
+                  <ImagePlus className={`mr-1.5 h-4 w-4 ${backfilling ? 'animate-pulse' : ''}`} />
+                  <span className="text-sm">
+                    {backfilling ? '抽取中…' : '补做关键画面'}
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                对这条笔记补做画面抽取（会重新下载视频，约 2-5 分钟）
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

@@ -182,6 +182,43 @@ extras 让字数 +65%、耗时 +38%。**extras 必须保留**——它保证标�
   （小红书 token 过期时视频能靠 hellotik 拿到，但音频 API 会 400101 炸掉整个任务）
 - **hellotik 平台映射**：`HELLOTIK_PAGES` + `CDN_ALLOW_BY_PLATFORM`
 
+**7. 一图流（LLM 提炼 + 排版，2026-11-04 新增，桌面端已验收）**
+
+需求：LLM 总结完视频后，根据整篇笔记生成一张「一图流」。
+
+两条路，**默认走 A**：
+
+**A. LLM 提炼 + PIL 排版（主路径，`POST /note/one_pager`）**
+```
+整篇笔记 → LLM 提炼 {title, subtitle, points[{head,body}], conclusion}
+        → PIL 渲染 1080×1350（深色刊头 + 要点卡 + 结论条）
+```
+- 文字由代码画，**100% 准确**、秒级、无额度限制
+- 提炼结果缓存到 `static/one_pagers/distill_<task_id>.json`，重复生成不再烧 token
+- LLM 不可用 → 自动降级到本地抽取（`_parse`），功能不失效
+- 关键文件：`app/utils/one_pager_distill.py`（提炼）、`app/utils/one_pager.py::_render_structured`（渲染）
+
+**B. AI 排版（`POST /note/one_pager_image`，可选）**
+同一份提炼结果 → 信息图提示词 → 文生图。更好看但可能写错字、约 23s、**每日 5 张**。
+
+**灵栈渠道实测（api.lingzhanskill.com）**：
+- 文生图 `POST /v1/images/generations`，模型 `gpt-image-2.5-flare`，约 23s，中文渲染准确
+- 图生图 `POST /v1/images/edits`，**必须 multipart/form-data**
+- 密钥在 `backend/config/image_gen.json`（已 gitignore），**绝不可硬编码**
+
+**三个坑（都踩过）**：
+1. **只支持 1024×1024**，传 1024x1536 报 422 `size_not_supported`。竖版靠 `_pad_to_portrait` 用 PIL 补画布
+2. **中文 prompt 必须 UTF-8**。`curl -F "prompt=中文"` 会变 GBK 乱码（实测 `revised_prompt` 出现 `°ÑÍ¼ÖÐµÄ`），模型收到等于没指令
+3. **灵能不自动抵扣**：网页端有余额，API 层免费额度用尽就是 429
+
+**三个排版 bug（都实测踩过，已修 + 有测试锁住）**：
+1. 结论条压页脚：`FOOTER_RESERVED` 62 → 96，改自下而上布局
+2. 要点静默丢失（6 条只画 5 条）：测量基准与绘制基准不一致，改为共用 `CARD_TITLE_H` + 5 档自适应字号
+3. 长标题压副标题：`head_h` 只算标题不算副标题行数
+
+**⚠️ 相对路径坑**：后端返回 `/static/one_pagers/xxx.png` 是相对路径，桌面端会拼成
+`tauri.localhost` 导致 404（破图）。前端必须过 `resolveAssetUrl()`（`utils/image-url.ts`）。
+
 ### 待办 ⏳
 
 **6. 离线回看原片（2026-11-03 新增，桌面端已验收）**

@@ -13,6 +13,10 @@ export const generateNote = async (data: {
   extras?: string
   video_understand?: boolean
   video_interval?: number
+  /** 抽取关键画面（参数表/清单/原理图等只存在于画面的信息）并写进笔记 */
+  keyframe_extract?: boolean
+  /** 归档原片到本地（离线回看），会让任务多下载完整视频 */
+  archive_video?: boolean
   grid_size: Array<number>
 }) => {
   try {
@@ -309,14 +313,40 @@ export const getBoardNotes = async (boardId: string): Promise<BoardInfo> => {
 export interface OnePagerResult {
   url: string
   path: string
+  /** llm = LLM 通读整篇笔记提炼；local = 本地抽取（LLM 不可用时的降级）；ai = 文生图 */
+  mode?: 'llm' | 'local' | 'ai'
+  points?: number
+  remaining_today?: number | null
 }
 
 export const buildOnePager = async (payload: {
   markdown: string
   source_label?: string
   cover_url?: string
+  task_id?: string
+  provider_id?: string
+  model_name?: string
+  use_llm?: boolean
 }): Promise<OnePagerResult> => {
   const res = await request.post('/note/one_pager', payload)
+  return (res.data ?? res) as OnePagerResult
+}
+
+/**
+ * AI 排版一图流（文生图）。
+ *
+ * 与 buildOnePager 的区别：
+ * - buildOnePager：PIL 本地排版，文字 100% 准确、秒级、无额度限制（默认）
+ * - buildOnePagerImage：AI 排版更漂亮，但可能写错字，约 20-30s，每日限次
+ */
+export const buildOnePagerImage = async (payload: {
+  markdown: string
+  task_id?: string
+  provider_id?: string
+  model_name?: string
+  source_label?: string
+}): Promise<OnePagerResult> => {
+  const res = await request.post('/note/one_pager_image', payload)
   return (res.data ?? res) as OnePagerResult
 }
 
@@ -326,4 +356,18 @@ export const buildImagePrompts = async (payload: {
 }): Promise<{ prompts: string[]; raw: string }> => {
   const res = await request.post('/note/image_prompt', payload)
   return (res.data ?? res) as { prompts: string[]; raw: string }
+}
+
+/**
+ * 给已有笔记补做关键画面抽取（2026-11-03）。
+ *
+ * 场景：当初没开「关键画面抽取」（因为慢），后来想补上。
+ * 后端复用已有视频/转写产物，只跑抽帧 + 视觉分析 + 追加到笔记。
+ */
+export const backfillKeyframes = async (taskId: string) => {
+  return await request.post(
+    '/note/backfill_keyframes',
+    { task_id: taskId },
+    { timeout: 30000 },
+  )
 }

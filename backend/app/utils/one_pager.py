@@ -163,15 +163,231 @@ def _parse(markdown: str, max_points: int = 6) -> Tuple[str, List[str]]:
     return title[:40], points[:max_points]
 
 
+def _render_structured(
+    data: dict,
+    output_path: str,
+    *,
+    source_label: str = "",
+    cover_path: Optional[str] = None,
+) -> Optional[str]:
+    """按 LLM 提炼的结构渲染（带小标题的要点卡）。
+
+    版式策略（2026-11-04 重写，修两个实测 bug）：
+    1. **自下而上布局**：先定页脚位置 → 结论条高度（按行数算）→ 剩下才是卡片区。
+       旧版把 avail_bottom 写死成 H-150，结论条实际只剩 60px 高，
+       第二行文字直接压在页脚上（实测「进点方式没有标准答案…」被裁）。
+    2. **自适应字号**：按要点总行数选档位（4 档），保证**所有要点都能画出来**。
+       旧版超出就 break，LLM 给了 6 条只显示 5 条——静默丢内容。
+    """
+    title = str(data.get("title") or "").strip() or "内容洞察"
+    subtitle = str(data.get("subtitle") or "").strip()
+    conclusion = str(data.get("conclusion") or "").strip()
+    points = data.get("points") or []
+    if not isinstance(points, list):
+        points = []
+
+    # 预处理要点：过滤空项
+    clean_points = []
+    for p in points:
+        if not isinstance(p, dict):
+            continue
+        head = str(p.get("head") or "").strip()
+        body = str(p.get("body") or "").strip()
+        if head or body:
+            clean_points.append((head, body))
+    if not clean_points:
+        return None
+
+    img = _PIL_NEW("RGB", (W, H), BG)
+    d = ImageDraw.Draw(img)
+
+    card_x = 64
+    card_w = W - 128
+    inner_w = card_w - 130          # 卡片内文字可用宽度（左侧给序号）
+    FOOTER_Y = H - 52               # 页脚文字基线
+    # 页脚预留高度：文字在 H-52 且字号 24（下缘约 H-30），再加 24px 间隙
+    # → 结论条底边必须止于 H-78。旧值 62 会让结论条压住页脚（实测踩过）。
+    FOOTER_RESERVED = 96
+
+    # ── ① 结论条：按文字行数算高度（自下而上）──
+    f_meta = _font(24)
+    f_concl = _font(29, bold=True)
+    concl_h = 0
+    concl_lines: List[str] = []
+    if conclusion:
+        concl_lines = _wrap(d, conclusion, f_concl, card_w - 60)[:3]
+        concl_h = 18 + 26 + len(concl_lines) * 38 + 16   # 上下内边距 + 标签 + 文字行
+    concl_top = (H - FOOTER_RESERVED - concl_h) if conclusion else H - FOOTER_RESERVED
+    card_bottom = (concl_top - 16) if conclusion else concl_top
+
+    # ── ② 刊头：按标题行数算高度 ──
+    # 坑（2026-11-04 实测）：标题折成 2 行时，第 2 行会压住副标题。
+    # 根因是 head_h 只按 title_lines 累加，没有把副标题行数一起算进来。
+    f_title = _font(58, bold=True)
+    f_sub = _font(27)
+    title_lines = _wrap(d, title, f_title, W - 140)[:2]
+    sub_lines = _wrap(d, subtitle, f_sub, W - 140)[:2] if subtitle else []
+
+    head_h = 62 + len(title_lines) * 70           # 标题区
+    if sub_lines:
+        head_h += 14 + len(sub_lines) * 38        # 副标题区
+    head_h += 56 if source_label else 34          # 来源行 + 底部留白
+    head_h = max(head_h, 230)
+
+    d.rectangle([0, 0, W, head_h], fill=INK)
+    d.rectangle([0, 0, 6, head_h], fill=ACCENT)
+
+    ty = 62
+    for line in title_lines:
+        d.text((64, ty), line, font=f_title, fill=(255, 255, 255))
+        ty += 70
+    if sub_lines:
+        ty += 14
+        for line in sub_lines:
+            d.text((64, ty), line, font=f_sub, fill=(178, 184, 192))
+            ty += 38
+    if source_label:
+        d.text((64, head_h - 44), source_label[:46], font=f_meta, fill=(150, 156, 164))
+
+    # ── ③ 卡片区：自适应字号，保证所有要点都放得下 ──
+    avail_top = head_h + 32
+    avail_h = card_bottom - avail_top
+    if avail_h < 220:
+        return None
+
+    # 档位：(head字号, body字号, head行高, body行高, 条目间距)
+    TIERS = [
+        (30, 28, 36, 42, 24),
+        (28, 26, 34, 38, 20),
+        (26, 24, 32, 35, 17),
+        (24, 22, 29, 31, 14),
+        (22, 21, 27, 29, 12),
+    ]
+
+    # 卡片内部布局常量（测量和绘制**必须共用**，否则会出现
+    # 「算得下但画不下」——2026-11-04 实测：LLM 给 6 条只画出 5 条）
+    CARD_PAD_TOP = 32        # 卡片顶 → 「核心要点」文字
+    CARD_TITLE_H = 76        # 「核心要点」+ 分隔线占高
+    CARD_PAD_BOTTOM = 22     # 最后一条 → 卡片底
+
+    chosen = None
+    for hsz, bsz, hh, bh, gap in TIERS:
+        f_head_t = _font(hsz, bold=True)
+        f_body_t = _font(bsz)
+        blocks = []
+        total = CARD_TITLE_H
+        for head, body in clean_points:
+            body_lines = _wrap(d, body, f_body_t, inner_w) if body else []
+            blocks.append((head, body_lines))
+            total += (hh if head else 0) + len(body_lines) * bh + gap
+        total += CARD_PAD_BOTTOM
+        # 卡片高度 = 内容总高；必须装得进可用区
+        if total <= avail_h:
+            chosen = (hsz, bsz, hh, bh, gap, f_head_t, f_body_t, blocks, total)
+            break
+
+    if chosen is None:
+        # 全部档位都放不下：用最紧档，接受截断（记日志便于发现问题）
+        hsz, bsz, hh, bh, gap = TIERS[-1]
+        f_head_t = _font(hsz, bold=True)
+        f_body_t = _font(bsz)
+        blocks = []
+        total = CARD_TITLE_H
+        for head, body in clean_points:
+            body_lines = _wrap(d, body, f_body_t, inner_w) if body else []
+            blocks.append((head, body_lines))
+            total += (hh if head else 0) + len(body_lines) * bh + gap
+        total += CARD_PAD_BOTTOM
+        chosen = (hsz, bsz, hh, bh, gap, f_head_t, f_body_t, blocks, total)
+        logger.warning(
+            f"[one_pager] 内容超出画布，将截断部分要点 "
+            f"(avail_h={avail_h}, 需要={total}, 要点数={len(clean_points)})"
+        )
+
+    _hsz, _bsz, hh, bh, gap, f_head_t, f_body_t, blocks, card_h = chosen
+    f_num = _font(min(_hsz, 28), bold=True)
+    f_sec = _font(26, bold=True)
+
+    card_h = min(card_h, avail_h)
+    d.rounded_rectangle([card_x, avail_top, card_x + card_w, avail_top + card_h],
+                        radius=20, fill=CARD, outline=HAIRLINE, width=1)
+    d.text((card_x + 36, avail_top + CARD_PAD_TOP), "核心要点", font=f_sec, fill=TEXT_2)
+    d.line([card_x + 36, avail_top + CARD_TITLE_H - 8,
+            card_x + card_w - 36, avail_top + CARD_TITLE_H - 8],
+           fill=HAIRLINE, width=1)
+
+    # 绘制起点与测量基准完全一致（CARD_TITLE_H），不再有额外偏移
+    py = avail_top + CARD_TITLE_H
+    bottom_limit = avail_top + card_h - CARD_PAD_BOTTOM
+    drawn = 0
+    for idx, (head, body_lines) in enumerate(blocks, start=1):
+        block_h = (hh if head else 0) + len(body_lines) * bh + gap
+        if py + block_h > bottom_limit:
+            break
+        d.text((card_x + 36, py + (2 if head else 0)), f"{idx:02d}",
+               font=f_num, fill=ACCENT)
+        ty2 = py
+        if head:
+            d.text((card_x + 104, ty2), head, font=f_head_t, fill=TEXT)
+            ty2 += hh
+        for bl in body_lines:
+            d.text((card_x + 104, ty2), bl, font=f_body_t, fill=TEXT_2)
+            ty2 += bh
+        py += block_h
+        drawn += 1
+
+    # ── ④ 结论条（位置已在上方算好，这里只画）──
+    if conclusion and concl_lines:
+        d.rounded_rectangle([card_x, concl_top, card_x + card_w, concl_top + concl_h],
+                            radius=14, fill=INK)
+        d.rectangle([card_x, concl_top, card_x + 5, concl_top + concl_h], fill=ACCENT)
+        d.text((card_x + 28, concl_top + 16), "结论", font=f_meta, fill=(150, 156, 164))
+        for i, line in enumerate(concl_lines):
+            d.text((card_x + 28, concl_top + 44 + i * 38), line,
+                   font=f_concl, fill=(255, 255, 255))
+
+    # ── ⑤ 封面缩略（只在没有结论条时贴，避免重叠）──
+    if cover_path and os.path.exists(cover_path) and not conclusion:
+        try:
+            with _PIL_OPEN(cover_path) as cv:
+                cv = cv.convert("RGB")
+                cw = 220
+                ch = int(cv.height * cw / cv.width)
+                cv = cv.resize((cw, ch))
+                img.paste(cv, (W - 64 - cw, H - FOOTER_RESERVED - ch - 8))
+        except Exception as e:
+            logger.warning(f"一图流封面粘贴失败（忽略）: {e}")
+
+    d.text((64, FOOTER_Y), "VidInsight · 内容洞察", font=f_meta, fill=MUTED)
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    img.save(output_path, "PNG")
+    logger.info(f"一图流（结构化）已生成: {output_path} "
+                f"({W}x{H}, {drawn}/{len(clean_points)} 要点, 字号档={_hsz}/{_bsz})")
+    return output_path
+
+
 def render_one_pager(
     markdown: str,
     output_path: str,
     *,
     source_label: str = "",
     cover_path: Optional[str] = None,
+    structured: Optional[dict] = None,
 ) -> Optional[str]:
-    """把总结渲染成一图流 PNG。返回输出路径，失败返回 None（绝不抛给调用方）。"""
+    """把总结渲染成一图流 PNG。返回输出路径，失败返回 None（绝不抛给调用方）。
+
+    :param structured: LLM 提炼后的结构（one_pager_distill.normalize 的产物）。
+        传了就按它渲染（带小标题的要点卡）；没传就退回本地抽取（从 markdown
+        里抓标题和列表项）——保证外部 LLM 不可用时功能仍然可用。
+    """
     try:
+        if structured and (structured.get("title") or structured.get("points")):
+            return _render_structured(
+                structured, output_path,
+                source_label=source_label, cover_path=cover_path,
+            )
+
         title, points = _parse(markdown)
         if not title and not points:
             return None

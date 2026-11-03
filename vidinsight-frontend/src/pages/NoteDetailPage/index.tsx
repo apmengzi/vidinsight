@@ -104,6 +104,7 @@ export default function NoteDetailPage() {
             markdown={markdownText}
             sourceLabel={task.audioMeta?.title || ''}
             coverUrl={task.audioMeta?.cover_url || ''}
+            taskId={task.id}
           />
         )}
       </header>

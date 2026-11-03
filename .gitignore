@@ -25,6 +25,8 @@ backend/board_notes.json
 backend/bili_note.db
 backend/config/downloader.json
 backend/config/transcriber.json
+# 联网搜索凭据（Exa / You.com 的 API key），绝不可入库
+backend/config/web_search.json
 backend/app/db/*.db
 vidinsight-frontend/src-tauri/target/
 vidinsight-frontend/.env*
@@ -52,3 +54,7 @@ out/
 .zcode/
 .tsc-baseline
 NUL
+# 文生图渠道凭据（灵栈），绝不可入库
+backend/config/image_gen.json
+# 一图流生成产物（提炼缓存 + 渲染图）
+backend/static/one_pagers/

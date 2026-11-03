@@ -28,7 +28,8 @@ import ChatPanel from '@/pages/HomePage/components/ChatPanel.tsx'
 import VideoBanner from '@/pages/HomePage/components/VideoBanner.tsx'
 import NoteVideoPlayer from '@/pages/HomePage/components/NoteVideoPlayer.tsx'
 import { resolveAssetUrl } from '@/utils/image-url.ts'
-import { backfillKeyframes } from '@/services/note.ts'
+import { backfillKeyframes, buildOnePager } from '@/services/note.ts'
+import { resolveAssetUrl } from '@/utils/image-url.ts'
 
 interface VersionNote {
   ver_id: string
@@ -699,6 +700,9 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
   const [showTranscribe, setShowTranscribe] = useState(false)
   const [showChat, setShowChat] = useState<false | 'half' | 'full'>(false)
   const [viewMode, setViewMode] = useState<'map' | 'preview'>('preview')
+  // 一图流（2026-11-04）：LLM 通读整篇笔记提炼后排版成竖图
+  const [onePagerBusy, setOnePagerBusy] = useState(false)
+  const [onePagerUrl, setOnePagerUrl] = useState<string | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [activeTocIndex, setActiveTocIndex] = useState(0)
 
@@ -973,6 +977,42 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
             toast.error(e?.msg || e?.message || '补做失败')
           }
         }}
+        onePagerBusy={onePagerBusy}
+        onOnePager={async () => {
+          const tid = currentTask?.id
+          if (!tid) {
+            toast.error('找不到任务 ID')
+            return
+          }
+          const md = typeof processedContent === 'string' ? processedContent : ''
+          if (md.length < 40) {
+            toast.error('内容太短，无法生成一图流')
+            return
+          }
+          setOnePagerBusy(true)
+          try {
+            const r: any = await buildOnePager({
+              markdown: md,
+              task_id: tid,
+              source_label: currentTask?.audioMeta?.title || '',
+              cover_url: currentTask?.audioMeta?.cover_url || '',
+            })
+            if (r?.url) {
+              setOnePagerUrl(r.url)
+              toast.success(
+                r.mode === 'local'
+                  ? '一图流已生成（模型不可用，已用本地抽取）'
+                  : '一图流已生成',
+              )
+            } else {
+              toast.error(r?.msg || '一图流生成失败')
+            }
+          } catch (e: any) {
+            toast.error(e?.msg || e?.message || '一图流生成失败')
+          } finally {
+            setOnePagerBusy(false)
+          }
+        }}
       />
 
       {viewMode === 'map' ? (
@@ -1093,6 +1133,49 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 一图流预览（2026-11-04）：生成后直接弹层看，可下载/新窗口打开 */}
+      {onePagerUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setOnePagerUrl(null)}
+        >
+          <div
+            className="flex max-h-[92vh] w-full max-w-[460px] flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5">
+              <span className="text-sm font-medium text-neutral-800">一图流</span>
+              <button
+                onClick={() => setOnePagerUrl(null)}
+                className="rounded px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-100"
+              >
+                关闭
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto bg-neutral-50 p-3">
+              <img src={resolveAssetUrl(onePagerUrl)} alt="一图流" className="w-full rounded" />
+            </div>
+            <div className="flex gap-2 border-t border-neutral-200 px-4 py-2.5">
+              <a
+                href={resolveAssetUrl(onePagerUrl)}
+                download
+                className="flex-1 rounded bg-neutral-900 px-3 py-1.5 text-center text-xs text-white hover:bg-neutral-700"
+              >
+                下载
+              </a>
+              <a
+                href={resolveAssetUrl(onePagerUrl)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 rounded border border-neutral-300 px-3 py-1.5 text-center text-xs text-neutral-700 hover:bg-neutral-50"
+              >
+                新窗口打开
+              </a>
+            </div>
+          </div>
         </div>
       )}
     </div>

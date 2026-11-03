@@ -1139,23 +1139,112 @@ class OnePagerRequest(BaseModel):
     title: Optional[str] = None
     source_label: Optional[str] = None
     cover_url: Optional[str] = None
+    task_id: Optional[str] = None
+    provider_id: Optional[str] = None
+    model_name: Optional[str] = None
+    # 是否让 LLM 通读整篇笔记提炼要点（默认开）。关掉则退回本地抽取。
+    use_llm: bool = True
+
+
+def _pick_llm_gpt(provider_id: Optional[str], model_name: Optional[str]):
+    """挑一个能用的 LLM 实例（写一图流要点用）。
+
+    优先用调用方指定的 provider/model；否则按「有 api_key + 有模型」筛，
+    再优先 workbuddy 内置免费池（免用户配 key）。
+    实测坑：只看 enabled 会选中 zhipu（有模型没 key）→ 报「API Key 未配置」。
+    """
+    from app.gpt.gpt_factory import GPTFactory
+    from app.models.model_config import ModelConfig
+
+    if provider_id:
+        try:
+            from app.services.provider import ProviderService
+            p = ProviderService.get_provider_by_id(provider_id)
+            if p and (p.get("api_key") or "").strip():
+                return GPTFactory().from_config(ModelConfig(
+                    api_key=p["api_key"], base_url=p["base_url"],
+                    model_name=model_name or "", provider=p["type"], name=p["name"],
+                ))
+        except Exception as e:
+            logger.warning(f"[one_pager] 指定供应商不可用，改用自动挑选: {str(e)[:80]}")
+
+    try:
+        from app.db.provider_dao import get_all_providers as _dao_providers
+        from app.db import model_dao
+
+        candidates = [
+            p for p in _dao_providers()
+            if p.enabled and (p.api_key or "").strip()
+            and model_dao.get_models_by_provider(p.id)
+        ]
+        if not candidates:
+            return None
+        candidates.sort(key=lambda p: 0 if p.id == "workbuddy" else 1)
+        prov = candidates[0]
+        model = model_dao.get_models_by_provider(prov.id)[0]
+        mname = model["model_name"] if isinstance(model, dict) else str(model)
+        return GPTFactory().from_config(ModelConfig(
+            api_key=prov.api_key, base_url=prov.base_url,
+            model_name=mname, provider=prov.type, name=prov.name,
+        ))
+    except Exception as e:
+        logger.warning(f"[one_pager] 自动挑选 LLM 失败: {str(e)[:80]}")
+        return None
 
 
 @router.post("/note/one_pager")
 def build_one_pager(data: OnePagerRequest):
-    """把总结渲染成一图流 PNG（本地渲染，不联网）。返回 /static 可访问地址。"""
+    """把整篇笔记渲染成一图流 PNG。
+
+    两条路径（2026-11-04 改造）：
+    - **主路径**：LLM 通读整篇笔记 → 提炼成 {title, subtitle, points, conclusion}
+      → PIL 按结构渲染。要点带小标题，信息密度比纯抽取高得多。
+    - **降级**：LLM 不可用/失败 → 退回本地抽取（抓标题和列表项），保证功能不失效。
+
+    提炼结果按 task_id 缓存到磁盘：同一条笔记重复生成不再烧 token。
+    """
     try:
         from app.utils.one_pager import render_one_pager
         from app.utils.path_helper import get_runtime_path
 
         out_dir = os.path.join(get_runtime_path("static"), "one_pagers")
         os.makedirs(out_dir, exist_ok=True)
+
+        markdown = data.markdown or ""
+        if len(markdown.strip()) < 20:
+            return R.error(msg="内容过短，无法生成一图流", err="ONE_PAGER_EMPTY")
+
+        # ① 提炼（优先读缓存）
+        structured = None
+        cache_path = None
+        if data.task_id and re.fullmatch(r"[A-Za-z0-9_-]{8,64}", data.task_id):
+            cache_path = os.path.join(out_dir, f"distill_{data.task_id}.json")
+            if os.path.exists(cache_path):
+                try:
+                    with open(cache_path, "r", encoding="utf-8") as f:
+                        structured = json.load(f)
+                    logger.info(f"[one_pager] 命中提炼缓存: {data.task_id[:8]}")
+                except Exception:
+                    structured = None
+
+        if structured is None and data.use_llm:
+            from app.utils.one_pager_distill import distill
+            gpt = _pick_llm_gpt(data.provider_id, data.model_name)
+            if gpt is not None:
+                structured = distill(markdown, gpt)
+                if structured and cache_path:
+                    try:
+                        with open(cache_path, "w", encoding="utf-8") as f:
+                            json.dump(structured, f, ensure_ascii=False, indent=1)
+                    except Exception as e:
+                        logger.warning(f"[one_pager] 缓存提炼结果失败（忽略）: {e}")
+
+        # ② 渲染
         name = f"onepager_{int(time.time())}_{uuid.uuid4().hex[:6]}.png"
         path = os.path.join(out_dir, name)
 
         cover_path = None
         if data.cover_url:
-            # 封面只做装饰：本地已有文件直接用，远程则跳过（避免为装饰阻塞）
             try:
                 if data.cover_url.startswith("/static/"):
                     cand = os.path.join(get_runtime_path("static"),
@@ -1166,14 +1255,21 @@ def build_one_pager(data: OnePagerRequest):
                 cover_path = None
 
         saved = render_one_pager(
-            data.markdown or "",
+            markdown,
             path,
             source_label=data.source_label or "",
             cover_path=cover_path,
+            structured=structured,
         )
         if not saved:
             return R.error(msg="内容不足，无法生成一图流", err="ONE_PAGER_EMPTY")
-        return R.success(data={"url": f"/static/one_pagers/{name}", "path": saved})
+        return R.success(data={
+            "url": f"/static/one_pagers/{name}",
+            "path": saved,
+            # 前端据此显示「LLM 提炼」还是「本地抽取」徽标
+            "mode": "llm" if structured else "local",
+            "points": len((structured or {}).get("points") or []),
+        })
     except Exception as e:
         logger.error(f"一图流生成失败: {e}", exc_info=True)
         return R.error(msg=f"一图流生成失败: {str(e)[:120]}", err="ONE_PAGER_FAILED")
@@ -1266,6 +1362,235 @@ def build_image_prompt(data: ImagePromptRequest):
     except Exception as e:
         logger.error(f"配图提示词生成失败: {e}", exc_info=True)
         return R.error(msg=f"提示词生成失败: {str(e)[:120]}", err="IMAGE_PROMPT_FAILED")
+
+
+# ── 文生图一图流（2026-11-04 新增，灵栈渠道）──────────────────
+# 实测（2026-11-04）：
+#   文生图 POST /v1/images/generations  约 23s，中文渲染准确（「扫地机器人选购」
+#     「吸力越大越好」等中文字形全部正确）
+#   图生图 POST /v1/images/edits        multipart/form-data 上传参考图
+#   ⚠️ 每日限次：响应体 remaining_today 会递减，用尽后需等次日
+#   ⚠️ 中文 prompt 必须以 UTF-8 发送；用 curl -F 传中文会变 GBK 乱码
+#      （实测 revised_prompt 出现「°ÑÍ¼ÖÐµÄ」这种乱码，模型收到等于没指令）
+
+IMAGE_GEN_BASE = os.getenv("IMAGE_GEN_BASE", "https://api.lingzhanskill.com/v1")
+IMAGE_GEN_KEY = os.getenv("IMAGE_GEN_KEY", "")
+IMAGE_GEN_MODEL = os.getenv("IMAGE_GEN_MODEL", "gpt-image-2.5-flare")
+
+
+def _load_image_gen_config() -> dict:
+    """读文生图配置：环境变量优先，其次 config/image_gen.json。
+
+    与 web_search.json 同一套做法——密钥放配置文件（已 gitignore），
+    绝不可硬编码进源码，否则推送到公开仓库等于泄漏。
+    """
+    global IMAGE_GEN_BASE, IMAGE_GEN_KEY, IMAGE_GEN_MODEL
+    if IMAGE_GEN_KEY:
+        return {"base": IMAGE_GEN_BASE, "key": IMAGE_GEN_KEY, "model": IMAGE_GEN_MODEL}
+    try:
+        from app.utils.path_helper import get_runtime_path
+        cfg_path = os.path.join(get_runtime_path("config"), "image_gen.json")
+        if os.path.exists(cfg_path):
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            IMAGE_GEN_BASE = cfg.get("base") or IMAGE_GEN_BASE
+            IMAGE_GEN_KEY = cfg.get("api_key") or ""
+            IMAGE_GEN_MODEL = cfg.get("model") or IMAGE_GEN_MODEL
+    except Exception as e:
+        logger.warning(f"[image_gen] 读取配置失败: {str(e)[:100]}")
+    return {"base": IMAGE_GEN_BASE, "key": IMAGE_GEN_KEY, "model": IMAGE_GEN_MODEL}
+
+
+# 一图流提示词：要求模型把要点**画成排版好的信息图**，而不是自由创作插画。
+# 关键约束：显式给出每一条要写的文字，否则模型会自己编内容。
+ONEPAGER_IMAGE_PROMPT = """设计一张竖版中文信息图（1080×1350 比例），用于社交媒体分享。
+
+版面要求：
+- 顶部：大号加粗标题「{title}」，下方一行细体副标题「{subtitle}」
+- 中部：{n} 个横向或网格排列的卡片，每张卡片内写一条要点
+- 底部：一行结论「{conclusion}」（如果非空）
+
+要点文字（必须逐字照抄，不要改写、不要翻译、不要增删）：
+{points}
+
+视觉风格：极简信息图，米白背景，黑色文字，细线条分隔，无装饰插画，
+无渐变，无阴影，留白充足。中文字体要清晰可读。整体像设计杂志的信息图表。
+"""
+
+
+class OnePagerImageRequest(BaseModel):
+    markdown: str
+    task_id: Optional[str] = None
+    provider_id: Optional[str] = None
+    model_name: Optional[str] = None
+    source_label: Optional[str] = None
+
+
+def _post_image_generation(prompt: str, size: str = "1024x1024") -> dict:
+    """调文生图接口，返回 {url, remaining} 或抛异常。
+
+    实测（2026-11-04）：该渠道**只支持 1024x1024**，传 1024x1536 会报
+    size_not_supported。要竖版就在下载后用 PIL 补画布（见 _pad_to_portrait）。
+
+    用 requests 而不是 urllib：需要正确控制 UTF-8 JSON 编码
+    （中文 prompt 必须显式 ensure_ascii=False + utf-8 bytes）。
+    """
+    import requests
+
+    cfg = _load_image_gen_config()
+    if not cfg["key"]:
+        raise RuntimeError("未配置文生图密钥（config/image_gen.json 的 api_key 或 IMAGE_GEN_KEY）")
+
+    resp = requests.post(
+        f"{cfg['base'].rstrip('/')}/images/generations",
+        headers={
+            "Authorization": f"Bearer {cfg['key']}",
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        # 关键：ensure_ascii=False + 显式 encode('utf-8')，否则中文变 \uXXXX
+        # 虽然 json 里 \u 转义理论上是合法的，但该网关实测会误解码成 GBK 乱码
+        data=json.dumps(
+            {"model": cfg["model"], "prompt": prompt, "n": 1, "size": size},
+            ensure_ascii=False,
+        ).encode("utf-8"),
+        timeout=300,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"文生图接口返回 {resp.status_code}: {resp.text[:200]}")
+    j = resp.json()
+    data = (j.get("data") or [{}])[0]
+    url = data.get("url") or ""
+    if not url:
+        raise RuntimeError(f"文生图接口未返回图片地址: {str(j)[:200]}")
+    return {"url": url, "remaining": j.get("remaining_today")}
+
+
+def _download_to(url: str, dest: str) -> str:
+    import requests
+
+    with requests.get(url, timeout=120, stream=True) as r:
+        r.raise_for_status()
+        os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+        with open(dest, "wb") as f:
+            for chunk in r.iter_content(256 * 1024):
+                if chunk:
+                    f.write(chunk)
+    return dest
+
+
+def _pad_to_portrait(src: str, dest: str, target_ratio: float = 0.8) -> str:
+    """把方形 AI 图补成竖版画布（1080×1350，与 PIL 路径同尺寸）。
+
+    为什么补画布而不是让模型出竖图：该渠道只支持 1024×1024。
+    补边用图片边缘的取样色，视觉上像是留白，不会突兀。
+    失败就原样返回（宁可方形也不能让整条链路失败）。
+    """
+    try:
+        from PIL import Image
+        with Image.open(src) as im:
+            im = im.convert("RGB")
+            w, h = im.size
+            target_h = int(w / target_ratio)     # 0.8 → 1080:1350
+            if target_h <= h:
+                im.save(dest, "PNG")
+                return dest
+            # 取四角平均色作为补边色
+            corners = [im.getpixel((2, 2)), im.getpixel((w - 3, 2)),
+                       im.getpixel((2, h - 3)), im.getpixel((w - 3, h - 3))]
+            bg = tuple(sum(c[i] for c in corners) // len(corners) for i in range(3))
+            canvas = Image.new("RGB", (w, target_h), bg)
+            canvas.paste(im, (0, (target_h - h) // 2))
+            canvas.save(dest, "PNG")
+        return dest
+    except Exception as e:
+        logger.warning(f"[one_pager_image] 竖版补边失败，保留原图: {str(e)[:100]}")
+        return src
+
+
+@router.post("/note/one_pager_image")
+def build_one_pager_image(data: OnePagerImageRequest):
+    """用文生图生成一图流（AI 排版），与本地 PIL 渲染并存。
+
+    流程：LLM 提炼要点 → 拼成「信息图版式」提示词 → 调文生图 → 落盘。
+    与 /note/one_pager 的区别：
+      - one_pager：PIL 本地排版，**文字 100% 准确**、秒级、无额度限制（推荐默认）
+      - one_pager_image：AI 排版更漂亮，但**可能写错字/漏字**、约 23s、每日限次
+    所以默认走前者，这个作为「想要更好看时」的可选项。
+    """
+    try:
+        from app.utils.path_helper import get_runtime_path
+        from app.utils.one_pager_distill import distill
+
+        markdown = (data.markdown or "").strip()
+        if len(markdown) < 40:
+            return R.error(msg="内容过短，无法生成一图流", err="ONE_PAGER_EMPTY")
+
+        out_dir = os.path.join(get_runtime_path("static"), "one_pagers")
+        os.makedirs(out_dir, exist_ok=True)
+
+        # ① 提炼（与 PIL 路径共用缓存，先跑过 /note/one_pager 就不用再烧 token）
+        structured = None
+        cache_path = None
+        if data.task_id and re.fullmatch(r"[A-Za-z0-9_-]{8,64}", data.task_id):
+            cache_path = os.path.join(out_dir, f"distill_{data.task_id}.json")
+            if os.path.exists(cache_path):
+                try:
+                    with open(cache_path, "r", encoding="utf-8") as f:
+                        structured = json.load(f)
+                except Exception:
+                    structured = None
+        if structured is None:
+            gpt = _pick_llm_gpt(data.provider_id, data.model_name)
+            if gpt is None:
+                return R.error(msg="未配置可用的模型供应商", err="PROVIDER_MISSING")
+            structured = distill(markdown, gpt)
+            if structured is None:
+                return R.error(msg="内容提炼失败，请重试", err="DISTILL_FAILED")
+            if cache_path:
+                try:
+                    with open(cache_path, "w", encoding="utf-8") as f:
+                        json.dump(structured, f, ensure_ascii=False, indent=1)
+                except Exception:
+                    pass
+
+        # ② 拼提示词：把要点逐条列出来，要求模型逐字照抄
+        pts = structured.get("points") or []
+        points_text = "\n".join(
+            f"{i}. {p.get('head','')}：{p.get('body','')}".strip("：")
+            for i, p in enumerate(pts, start=1)
+        )
+        prompt = ONEPAGER_IMAGE_PROMPT.format(
+            title=structured.get("title") or "内容洞察",
+            subtitle=structured.get("subtitle") or "",
+            n=len(pts) or 3,
+            conclusion=structured.get("conclusion") or "",
+            points=points_text,
+        )
+
+        # ③ 调文生图（该渠道只支持 1024x1024，竖版靠 PIL 补画布）
+        gen = _post_image_generation(prompt)
+        name = f"onepager_ai_{int(time.time())}_{uuid.uuid4().hex[:6]}.png"
+        dest = os.path.join(out_dir, name)
+        tmp_raw = dest + ".raw.png"
+        _download_to(gen["url"], tmp_raw)
+        _pad_to_portrait(tmp_raw, dest)
+        try:
+            if os.path.exists(tmp_raw) and tmp_raw != dest:
+                os.remove(tmp_raw)
+        except Exception:
+            pass
+
+        logger.info(f"[one_pager_image] 生成完成: {name} (remaining={gen.get('remaining')})")
+        return R.success(data={
+            "url": f"/static/one_pagers/{name}",
+            "mode": "ai",
+            "points": len(pts),
+            "remaining_today": gen.get("remaining"),
+            "source_url": gen["url"],
+        })
+    except Exception as e:
+        logger.error(f"文生图一图流失败: {e}", exc_info=True)
+        return R.error(msg=f"文生图生成失败: {str(e)[:160]}", err="ONE_PAGER_IMAGE_FAILED")
 
 
 class BackfillKeyframeRequest(BaseModel):
