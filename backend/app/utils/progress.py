@@ -76,37 +76,79 @@ def make_ytdlp_progress_hook(on_progress: Callable[[float], None],
 
     - ``total_bytes`` 缺失时退回 ``total_bytes_estimate``；两者都没有则不上报
       （分段/直播类下载没有可靠总量，宁可写 null 也不编一个百分比）。
-    - 视频+音频分段下载会让百分比回退，这里按"单调不回退"处理。
+    - **分段下载进度合并**（2026-11-03 修复）：B 站 DASH 是「视频轨 + 音频轨」
+      两段下载，每段都会走一遍 0→100。旧实现每段重置 last，用户看到
+      79% 突然跳回 0%（实测）。现在按段数累计：第 1 段映射到 0-50%，
+      第 2 段映射到 50-100%，整体单调递增。
     - 回调内任何异常都不能冒泡进 yt-dlp（会把下载本身搞挂），
       唯一例外是协作式取消信号 TaskCancelled。
     """
-    state = {"last": 0.0}
+    # 段数优先从 info_dict.requested_formats 读（DASH 合并下载时 yt-dlp 会带
+    # 视频/音频两条格式）；读不到时先按单段处理，等真出现段内回退再修正。
+    # 旧实现硬编码「2 段、第 1 段映射 0-50%」，单段下载会被无谓压缩到 0-50%。
+    # 关键：**任何情况下都不允许进度回退**——重新映射后若比已报值低，
+    # 就停在已报值上，直到真实进度追上来（用户看到的是"卡住"而非"倒退"）。
+    state = {"seg": 0, "done": 0, "n_seg": None, "last": 0.0, "seg_last": 0.0}
+
+    def _expected_segments(d) -> Optional[int]:
+        info = d.get("info_dict") or {}
+        rf = info.get("requested_formats")
+        if isinstance(rf, (list, tuple)) and len(rf) > 0:
+            return len(rf)
+        return None
 
     def hook(d) -> None:
         try:
             status = d.get("status") if isinstance(d, dict) else None
+            if state["n_seg"] is None:
+                n = _expected_segments(d)
+                if n:
+                    state["n_seg"] = n
+
             if status == "finished":
-                pct = 100.0
+                state["done"] += 1
+                state["seg_last"] = 100.0
+                n = state["n_seg"]
+                # 段数未知：这段结束了但可能还有下一段，先不给 100
+                overall = (100.0 * state["done"] / n) if n else 99.0
             elif status == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate")
                 downloaded = d.get("downloaded_bytes")
                 if not total or downloaded is None:
                     return
-                pct = float(downloaded) / float(total) * 100.0
+                pct = clamp_pct(float(downloaded) / float(total) * 100.0)
+                if pct is None:
+                    return
+
+                # 段内进度回退 = 进入了新的一段（yt-dlp 每段从 0 重新计）
+                if pct + 1.0 < state["seg_last"]:
+                    state["seg"] += 1
+                    state["done"] = max(state["done"], state["seg"])
+                    state["seg_last"] = 0.0
+                    if state["n_seg"] is None:
+                        # 实际是多段：按「已完成段 + 当前段」重新映射
+                        state["n_seg"] = state["done"] + 1
+                else:
+                    state["seg_last"] = pct
+
+                n = state["n_seg"] or 1
+                overall = (state["done"] + pct / 100.0) * 100.0 / n
             else:
                 return
 
-            pct = clamp_pct(pct)
-            if pct is None:
+            overall = clamp_pct(overall)
+            if overall is None:
                 return
-            if pct < state["last"]:
-                pct = state["last"]
+
+            # 全局单调不回退：重新映射可能算出更低的值，停在已报值上
+            if overall < state["last"]:
+                overall = state["last"]
             else:
-                state["last"] = pct
+                state["last"] = overall
 
             if throttle is not None and not throttle.allow(key):
                 return
-            on_progress(pct)
+            on_progress(overall)
         except TaskCancelled:
             # 协作式取消必须穿透 yt-dlp 冒泡到管线，不能被"进度失败"吞掉
             raise

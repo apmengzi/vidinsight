@@ -9,6 +9,11 @@
 import pytest
 from fastapi.testclient import TestClient
 
+# mcp 是可选依赖（未安装时 main.py 只打一条警告、跳过挂载）。
+# 缺包时整模块跳过，而不是让整个 pytest 收集失败——否则跑一次全量测试
+# 会直接 Interrupted，把其它 300 个用例的结果一起吞掉。
+pytest.importorskip("mcp", reason="未安装 mcp 依赖，跳过 MCP 契约测试")
+
 from app.routers.mcp import _detect_platform, _mcp
 
 

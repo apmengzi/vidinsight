@@ -163,7 +163,9 @@ def test_ytdlp_hook_converts_bytes_to_percent_and_ignores_unknown_total():
 
     assert seen[0] == 0.0
     assert seen[1] == 25.0
-    assert seen[-1] == 100.0
+    # 单段下载、info_dict 里没有 requested_formats：段数未知，完成时只给 99，
+    # 由管线下游在真正收尾时写 100（避免"还有第二段没下"时提前报满）。
+    assert seen[-1] == 99.0
     assert all(isinstance(v, float) for v in seen)
     assert all(0.0 <= v <= 100.0 for v in seen)
 
@@ -174,7 +176,31 @@ def test_ytdlp_hook_uses_estimate_and_is_monotonic():
 
     hook({"status": "downloading", "downloaded_bytes": 900, "total_bytes_estimate": 1000})
     hook({"status": "downloading", "downloaded_bytes": 100, "total_bytes": 1000})
+    # 第 1 段按单段口径报到 90%，随后检测到段内回退（进入第 2 段）。
+    # 重新映射后的值低于已报值 → 停在 90%，等真实进度追上来。
+    # 用户看到的是"卡住"，而不是从 79% 跳回 0%（实测过的旧 bug）。
     assert seen == [90.0, 90.0], "分段下载回退的百分比不能被写回去"
+    assert seen == sorted(seen), "整体必须单调"
+
+
+def test_ytdlp_hook_two_segments_reach_100():
+    """明确告知两段时，两段都 finished 才到 100。"""
+    seen = []
+    hook = make_ytdlp_progress_hook(seen.append, throttle=None)
+    info = {"requested_formats": [{"format_id": "v"}, {"format_id": "a"}]}
+
+    hook({"status": "downloading", "downloaded_bytes": 50, "total_bytes": 100,
+          "info_dict": info})
+    hook({"status": "finished", "info_dict": info})
+    hook({"status": "downloading", "downloaded_bytes": 50, "total_bytes": 100,
+          "info_dict": info})
+    hook({"status": "finished", "info_dict": info})
+
+    assert seen[0] == 25.0   # 第 1 段一半
+    assert seen[1] == 50.0   # 第 1 段完成
+    assert seen[2] == 75.0   # 第 2 段一半
+    assert seen[3] == 100.0  # 全部完成
+    assert seen == sorted(seen), "整体必须单调"
 
 
 def test_ytdlp_hook_swallows_errors():
@@ -242,7 +268,9 @@ def test_download_stage_writes_stage_progress(tmp_path, monkeypatch):
 def test_transcribe_stage_writes_stage_progress(tmp_path, monkeypatch):
     monkeypatch.setattr(note_mod, "NOTE_OUTPUT_DIR", tmp_path)
     gen = _bare_generator()
-    gen.transcriber = _FakeTranscriber(fractions=(0.25, 0.5))
+    # transcriber 已是只读 property（惰性加载），不能赋值；
+    # 直接塞底层实例变量，等价于「转写器已就绪」。
+    gen._transcriber_instance = _FakeTranscriber(fractions=(0.25, 0.5))
 
     transcript = gen._transcribe_audio(
         audio_file="fake.mp3",
@@ -412,6 +440,15 @@ def test_task_status_route_exposes_stage_progress(tmp_path, monkeypatch):
 
     monkeypatch.setattr(note_router, "NOTE_OUTPUT_DIR", str(tmp_path))
 
+    # get_task_status 后来加了 owner 越权校验，需要 request 参数。
+    # 测试只关心 stage_progress 透出，用一个不带 owner 头的假 Request 即可
+    # （owner 隔离在测试环境默认关闭，不传头也能过）。
+    class _Req:
+        headers = {}
+        query_params = {}
+
+    _req = _Req()
+
     # 阶段内可量化
     (tmp_path / "r1.status.json").write_text(_json.dumps({
         "status": TaskStatus.TRANSCRIBING.value,
@@ -419,7 +456,7 @@ def test_task_status_route_exposes_stage_progress(tmp_path, monkeypatch):
         "elapsed_s": 3.0,
         "stage_times": {"PARSING": 0.2},
     }), encoding="utf-8")
-    resp = note_router.get_task_status("r1")
+    resp = note_router.get_task_status("r1", _req)
     payload = _json.loads(resp.body)
     assert payload["data"]["stage_progress"] == 61.5
     assert payload["data"]["progress"] is None  # 全局 progress 缺省保持原样
@@ -429,7 +466,7 @@ def test_task_status_route_exposes_stage_progress(tmp_path, monkeypatch):
         "status": TaskStatus.SUMMARIZING.value,
         "stage_progress": None,
     }), encoding="utf-8")
-    payload = _json.loads(note_router.get_task_status("r2").body)
+    payload = _json.loads(note_router.get_task_status("r2", _req).body)
     assert "stage_progress" in payload["data"]
     assert payload["data"]["stage_progress"] is None
 
@@ -440,7 +477,7 @@ def test_task_status_route_exposes_stage_progress(tmp_path, monkeypatch):
         "stage_times": {"PARSING": 0.4, "SUMMARIZING": 12.3},
     }), encoding="utf-8")
     (tmp_path / "r3.json").write_text(_json.dumps({"markdown": "# x"}), encoding="utf-8")
-    payload = _json.loads(note_router.get_task_status("r3").body)
+    payload = _json.loads(note_router.get_task_status("r3", _req).body)
     assert payload["data"]["stage_progress"] == 100.0
     assert payload["data"]["stage_times"]["SUMMARIZING"] == 12.3
 

@@ -93,12 +93,12 @@ def test_schema_handler_parity():
 
 
 def test_harness_tools_count():
-    # 4 consume (search_kb/get_source/list_notes/clarify)
+    # 5 consume (search_kb/get_source/list_notes/clarify/web_search)
     # + 6 produce (validate_video_url/list_supported_platforms/generate_note/
     #              ingest_board/parse_xhs_note/parse_video_link)
     names = {t["function"]["name"] for t in harness.HARNESS_TOOLS}
-    assert len(names) == 10, names
-    consume = {"search_kb", "get_source", "list_notes", "clarify"}
+    assert len(names) == 11, names
+    consume = {"search_kb", "get_source", "list_notes", "clarify", "web_search"}
     produce = set(produce_tools.PRODUCE_HANDLERS.keys())
     assert (consume | produce) == names
 
@@ -123,7 +123,7 @@ class _FakeHarness(harness.VidInsightHarness):
 def test_select_tools_consume_only():
     h = _FakeHarness()
     names = {t["function"]["name"] for t in h._select_tools(["consume"])}
-    assert names == {"search_kb", "get_source", "list_notes", "clarify"}, names
+    assert names == {"search_kb", "get_source", "list_notes", "clarify", "web_search"}, names
 
 
 def test_select_tools_produce_only():
@@ -135,7 +135,7 @@ def test_select_tools_produce_only():
 def test_select_tools_none_means_all():
     h = _FakeHarness()
     names = {t["function"]["name"] for t in h._select_tools(None)}
-    assert len(names) == 10, names
+    assert len(names) == 11, names
 
 
 # ── 5. 平台识别 ──────────────────────────────────────
