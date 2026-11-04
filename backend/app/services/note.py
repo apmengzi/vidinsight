@@ -977,6 +977,13 @@ class NoteGenerator:
                 transcript = self.transcriber.transcript(file_path=audio_file, on_progress=_report_transcribe_progress)
             else:
                 transcript = self.transcriber.transcript(file_path=audio_file)
+
+            # 双引擎融合（2026-11-04）：whisper 出时间轴，FunASR 出校对文本，
+            # LLM 只在「两份差异明显」的段上做字词级选择。
+            # 只在用户显式选 funasr-merge 时触发；默认路径完全不变。
+            transcript = self._maybe_merge_funasr(
+                transcript, audio_file, task_id)
+
             transcript_cache_file.write_text(json.dumps(asdict(transcript), ensure_ascii=False, indent=2), encoding="utf-8")
             logger.info(f"转写并缓存成功 ({transcript_cache_file})")
             return transcript
@@ -984,6 +991,79 @@ class NoteGenerator:
             logger.error(f"音频转写失败：{exc}")
             self._handle_exception(task_id, exc)
             raise
+
+    def _maybe_merge_funasr(
+        self,
+        transcript: TranscriptResult,
+        audio_file: str,
+        task_id: str,
+    ) -> TranscriptResult:
+        """双引擎融合：whisper 时间轴 + FunASR 校对文本 → LLM 选字。
+
+        设计要点（为什么不是「两份丢给 LLM 让它重写」）：
+        - 时间轴只能来自 whisper（FunASR 不给逐句时间戳），否则章节切分、
+          关键画面定位、点击跳转全失效
+        - 只把「两份差异明显」的段送 LLM，token 成本是全文对齐的 1/10
+        - 每段替换都记审计（original/candidate/chosen），可回溯
+
+        任何失败都返回原 transcript —— 融合是增强项，不能拖垮转写主流程。
+        """
+        # 只在显式选择融合引擎时触发
+        try:
+            from app.transcriber.transcriber_provider import TranscriberType
+            from app.transcriber.transcriber_provider import _transcribers
+            if _transcribers.get(TranscriberType.FUNASR_MERGE) is None:
+                return transcript
+        except Exception:
+            return transcript
+
+        try:
+            from app.transcriber.funasr_transcriber import FunASRTranscriber, is_available
+            from app.transcriber.merge import merge_transcripts
+
+            if not is_available():
+                logger.warning("[merge] FunASR 不可用，跳过融合")
+                return transcript
+
+            self._update_status(task_id, TaskStatus.TRANSCRIBING,
+                                message="正在进行双引擎校对…", stage_progress=95.0)
+
+            # ① FunASR 跑一遍（GPU 上约 10-14s）
+            ref = FunASRTranscriber().transcript(file_path=audio_file)
+            if not ref.full_text:
+                logger.warning("[merge] FunASR 返回空文本，跳过融合")
+                return transcript
+
+            # ② LLM 校对（拿不到 LLM 就纯规则对比，不调模型）
+            gpt = None
+            try:
+                provider_id = os.getenv("MERGE_PROVIDER_ID", "")
+                model_name = os.getenv("MERGE_MODEL_NAME", "")
+                if provider_id:
+                    gpt = self._get_gpt(model_name, provider_id)
+            except Exception as e:
+                logger.warning(f"[merge] 获取 LLM 失败，将只做规则对比: {str(e)[:80]}")
+
+            # FunASR 的 raw 里带 raw_text + timestamp，merge 用它做时间轴对齐
+            funasr_raw = ref.raw if isinstance(ref.raw, dict) else {}
+            merged, audit = merge_transcripts(
+                transcript, funasr_raw, gpt=gpt)
+
+            # ③ 审计落盘，便于事后核对改了哪些字
+            if audit:
+                try:
+                    from app.utils.path_helper import get_runtime_path
+                    ap = Path(get_runtime_path("note_results")) / f"{task_id}_merge_audit.json"
+                    ap.write_text(json.dumps(audit, ensure_ascii=False, indent=1),
+                                  encoding="utf-8")
+                    logger.info(f"[merge] 审计记录已保存: {ap}")
+                except Exception as e:
+                    logger.warning(f"[merge] 审计落盘失败（忽略）: {e}")
+
+            return merged
+        except Exception as e:
+            logger.warning(f"[merge] 融合失败，保留 whisper 原结果: {str(e)[:120]}")
+            return transcript
 
     def _summarize_text(
         self,

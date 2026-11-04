@@ -17,6 +17,10 @@ class TranscriberType(str, Enum):
     BCUT = "bcut"
     KUAISHOU = "kuaishou"
     GROQ = "groq"
+    # 2026-11-04：阿里 Paraformer。快、带标点，但无逐句时间戳
+    FUNASR = "funasr"
+    # whisper 出时间轴 + FunASR 出校对文本 → LLM 只在分歧段做字词选择
+    FUNASR_MERGE = "funasr-merge"
 
 # 在 Apple 平台尝试导入 MLX Whisper（不再依赖环境变量，支持前端动态切换）
 MLX_WHISPER_AVAILABLE = False
@@ -37,6 +41,8 @@ _transcribers = {
     TranscriberType.BCUT: None,
     TranscriberType.KUAISHOU: None,
     TranscriberType.GROQ: None,
+    TranscriberType.FUNASR: None,
+    TranscriberType.FUNASR_MERGE: None,
 }
 
 # 2026-10-20：启动预热线程与首个请求线程可能并发创建 whisper 转写器（模型
@@ -97,6 +103,22 @@ def get_whisper_transcriber(model_size="base", device="cuda"):
 def get_bcut_transcriber():
     return _init_transcriber(TranscriberType.BCUT, BcutTranscriber)
 
+
+def _get_funasr_transcriber(device="cpu"):
+    """FunASR 转写器（懒加载，首次约 25s 下载+加载）。
+
+    未安装时给明确指引，不静默回落到 whisper——用户主动选了它，
+    悄悄换引擎会让「为什么结果不对」变成排查噩梦。
+    """
+    from app.transcriber.funasr_transcriber import FunASRTranscriber, is_available
+
+    if not is_available():
+        raise RuntimeError(
+            "FunASR 不可用：请执行 pip install funasr kaldi-native-fbank，"
+            "或在「音频转写配置」页面切换到其他引擎。"
+        )
+    return _init_transcriber(TranscriberType.FUNASR, FunASRTranscriber, device=device)
+
 def get_kuaishou_transcriber():
     return _init_transcriber(TranscriberType.KUAISHOU, KuaishouTranscriber)
 
@@ -148,6 +170,15 @@ def get_transcriber(transcriber_type="fast-whisper", model_size="base", device="
 
     elif transcriber_enum == TranscriberType.GROQ:
         return get_groq_transcriber()
+
+    elif transcriber_enum == TranscriberType.FUNASR:
+        return _get_funasr_transcriber(device=device)
+
+    elif transcriber_enum == TranscriberType.FUNASR_MERGE:
+        # 融合引擎：whisper 出时间轴，FunASR 出校对文本。
+        # 这里返回的仍是 whisper 实例——融合发生在 note.py 的转写阶段
+        # （需要 LLM 实例，provider 层拿不到）。见 merge.py。
+        return get_whisper_transcriber(whisper_model_size, device=device)
 
     # fallback
     logger.warning(f'未识别转录器类型 "{transcriber_type}"，使用 fast-whisper 作为默认')
