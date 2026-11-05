@@ -78,3 +78,7 @@ build*.log
 .tmp_research/
 nul
 cdp_tools/*.png
+.playwright-mcp/
+.v2c/
+.video_agent/
+doc/_gpu_smi.log
