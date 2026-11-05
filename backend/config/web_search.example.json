@@ -1,0 +1,8 @@
+{
+  "_comment": "复制为 web_search.json 后填写（该文件已在 .gitignore，不会入库）。推荐把 key 放环境变量 EXA_API_KEY / YDC_API_KEY，本文件只留 provider / proxy / num_results。",
+  "provider": "exa",
+  "exa_api_key": "your-exa-api-key",
+  "ydc_api_key": "your-you-com-api-key",
+  "proxy": "",
+  "num_results": 6
+}

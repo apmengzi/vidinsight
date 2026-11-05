@@ -93,6 +93,32 @@ AGENT_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "web_search",
+            "description": (
+                "联网搜索公开网页，获取洞察库之外的实时信息。"
+                "适用场景：查行业趋势、平台规则变化、竞品公开资料、"
+                "需要最新数据或洞察库未覆盖的外部知识。"
+                "返回标题、链接与摘要片段，可作为回答来源引用。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "搜索查询，用自然语言或关键词描述要查的外部信息",
+                    },
+                    "num_results": {
+                        "type": "integer",
+                        "description": "返回结果数量，默认 6，最大 10",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "clarify",
             "description": (
                 "当用户的问题不够明确、有多种理解方式、或缺少关键信息时，"
@@ -132,6 +158,8 @@ class ToolExecutor:
                 return self._get_source(arguments)
             elif tool_name == "list_notes":
                 return self._list_notes()
+            elif tool_name == "web_search":
+                return self._web_search(arguments)
             elif tool_name == "clarify":
                 return self._clarify(arguments)
             else:
@@ -244,6 +272,48 @@ class ToolExecutor:
             "total": len(notes),
             "notes": notes,
         }, ensure_ascii=False)
+
+    # ── web_search ─────────────────────────────
+
+    def _web_search(self, args: dict) -> str:
+        query = (args.get("query") or "").strip()
+        if not query:
+            return json.dumps({"error": "查询不能为空"}, ensure_ascii=False)
+
+        try:
+            from app.services.web_search import web_search, is_configured
+
+            if not is_configured():
+                return json.dumps(
+                    {"error": "联网搜索未配置：请设置 EXA_API_KEY 或 YDC_API_KEY"},
+                    ensure_ascii=False,
+                )
+
+            data = web_search(query, args.get("num_results"))
+            results = data.get("results", [])
+            formatted = [
+                {
+                    "index": i,
+                    "citation": f"[W{i + 1}]",
+                    "title": r.get("title", ""),
+                    "url": r.get("url", ""),
+                    "published": r.get("published", ""),
+                    "text": r.get("snippet", "")[:800],
+                }
+                for i, r in enumerate(results)
+            ]
+            return json.dumps({
+                "query": query,
+                "provider": data.get("provider", ""),
+                "total": len(formatted),
+                "results": formatted,
+                "note": "以上为联网检索结果，引用时请标注为外部来源。",
+            }, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"[web_search] 搜索失败: {e}")
+            return json.dumps(
+                {"error": f"联网搜索失败: {str(e)}"}, ensure_ascii=False,
+            )
 
     # ── clarify ────────────────────────────────
 
