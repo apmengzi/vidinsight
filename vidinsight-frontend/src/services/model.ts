@@ -45,6 +45,26 @@ export const fetchEnableModels = async () => {
 export const deleteModelById = async (modelId: number) => {
   return await request.get(`/models/delete/${modelId}`)
 }
+
+// 模型能力标记：image=支持读图（关键帧抽取用），video=支持视频输入
+export const updateModelCapabilities = async (
+  modelId: number,
+  capabilities: Record<string, unknown>,
+) => {
+  return await request.post('/model_capabilities', { model_id: modelId, capabilities })
+}
+
+// 供应商预设模板（结构参考 ZCode 的 templateRules）
+export const fetchProviderTemplates = async () => {
+  const res = await request.get('/provider_templates')
+  return (res.data ?? res) as unknown[]
+}
+
+// API 协议格式枚举（名称 + 端点路径）
+export const fetchApiFormats = async () => {
+  const res = await request.get('/api_formats')
+  return (res.data ?? res) as { value: string; label: string; path: string }[]
+}
 // 真实拉取 OpenAI 兼容供应商的可用模型清单（/v1/models）。
 // 首启引导/供应商配置页用：填完 key 点「检测可用模型」→ 下拉选择。
 export const fetchRemoteModels = async (api_key: string, base_url: string, opts?: CallOpts) => {

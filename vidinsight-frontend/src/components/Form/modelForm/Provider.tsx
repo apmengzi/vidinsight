@@ -7,7 +7,9 @@ const Provider = () => {
   const providers = useProviderStore(state => state.provider)
   const navigate = useNavigate()
   const handleClick = () => {
-    navigate(`/settings/model/new`)
+    // 先进预设选择页（选 BigModel/Z.ai/DeepSeek 等自动填好 baseUrl 和协议），
+    // 想手填再点「创建自定义供应商」——用户手填 baseUrl 极易配错
+    navigate(`/settings/model/preset`)
   }
 
   return (

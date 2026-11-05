@@ -72,6 +72,10 @@ class ModelService:
                 "provider_id": model.get("provider_id"),
                 "model_name": model.get("model_name"),
                 "created_at": model.get("created_at", None),  # 如果有created_at字段
+                # 模型能力必须透出：前端「关键画面抽取」开关靠
+                # capabilities.inputFormat.supportsImage 判断能不能读图。
+                # 之前这里把字段丢了，开关永远 disabled（2026-11-03 实测）。
+                "capabilities": model.get("capabilities") or {},
             })
         return formatted
     @staticmethod

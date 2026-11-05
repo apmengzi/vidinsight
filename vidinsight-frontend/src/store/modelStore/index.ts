@@ -22,6 +22,27 @@ interface IModelListItem {
   provider_id: string
   model_name: string
   created_at?: string
+  /** 模型能力（输入模态、上下文窗口、推理档位等），后端 /model_list 返回。
+      关键画面开关靠 inputFormat.supportsImage 判断模型能不能读图。 */
+  capabilities?: {
+    contextWindow?: number | null
+    maxOutputTokens?: number | null
+    inputFormat?: {
+      supportsText?: boolean
+      supportsImage?: boolean
+      supportsVideo?: boolean
+      supportsAudio?: boolean
+      supportsPdf?: boolean
+    }
+    supportsToolCall?: boolean
+    supportsJsonSchemaOutput?: boolean
+    supportsNativeWebSearch?: boolean
+    supportsMidConversationSystem?: boolean
+    reasoningLevels?: string[]
+    reasoningMap?: string | null
+    /** 老数据兼容（{"image": true}） */
+    image?: boolean
+  }
 }
 
 interface ModelStore {

@@ -34,6 +34,7 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
 const Model = lazy(() => import('@/pages/SettingPage/Model.tsx'))
 const ProviderForm = lazy(() => import('@/components/Form/modelForm/Form.tsx'))
+const ProviderPresetPage = lazy(() => import('@/pages/SettingPage/ProviderPresetPage.tsx'))
 const AboutPage = lazy(() => import('@/pages/SettingPage/about.tsx'))
 const Monitor = lazy(() => import('@/pages/SettingPage/Monitor.tsx'))
 const Downloader = lazy(() => import('@/pages/SettingPage/Downloader.tsx'))
@@ -119,6 +120,10 @@ function App() {
               <Route path="settings" element={<SettingPage />}>
                 <Route index element={<Navigate to="model" replace />} />
                 <Route path="model" element={<Model />}>
+                  {/* 预设选择页先于空表单：用户手填 baseUrl 极易出错
+                      （智谱有 coding-plan 和 standard 两个入口），
+                      预设把 baseUrl/apiFormat/模型列表打包好，只需填 Key */}
+                  <Route path="preset" element={<ProviderPresetPage />} />
                   <Route path="new" element={<ProviderForm isCreate />} />
                   <Route path=":id" element={<ProviderForm />} />
                 </Route>

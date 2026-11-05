@@ -17,6 +17,8 @@ class ProviderRequest(BaseModel):
     base_url: str
     logo: Optional[str] = None
     type: str
+    # API 协议格式（参考 ZCode provider.api.type）
+    api_format: Optional[str] = None
 
 class TestRequest(BaseModel):
     id: str
@@ -29,6 +31,7 @@ class ProviderUpdateRequest(BaseModel):
     base_url: Optional[str] = None
     logo: Optional[str] = None
     type: Optional[str] = None
+    api_format: Optional[str] = None
     enabled:Optional[int] = None
 
 @router.post("/add_provider")
@@ -39,7 +42,8 @@ def add_provider(data: ProviderRequest):
             api_key=data.api_key,
             base_url=data.base_url,
             logo=data.logo,
-            type_=data.type
+            type_=data.type,
+            api_format=data.api_format,
         )
         return R.success(msg='添加模型供应商成功',data=res)
     except Exception as e:

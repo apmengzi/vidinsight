@@ -1,0 +1,176 @@
+{
+  "_comment": "供应商预设模板，结构参考 ZCode 开源版 zai-org/ZCode 的 templateRules。不含 apiKey，只是可复制的基线；用户点选后生成 provider 实例，之后只写用户改过的字段。baseUrl 是 2026-10 的地址，落地前请复核。",
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "bigmodel-api",
+      "name": "BigModel Coding Plan",
+      "group": "智谱",
+      "apiFormat": "anthropic-messages",
+      "baseUrl": "https://open.bigmodel.cn/api/anthropic",
+      "models": [
+        "GLM-5.3",
+        "GLM-5.3-Flash"
+      ],
+      "apiKeyUrl": "https://bigmodel.cn/coding-plan/personal/overview",
+      "logo": "Zhipu"
+    },
+    {
+      "id": "bigmodel-standard-api",
+      "name": "BigModel API",
+      "group": "智谱",
+      "apiFormat": "openai-chat-completions",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "models": [
+        "GLM-5.3",
+        "GLM-5.3-Flash",
+        "GLM-5V-Turbo",
+        "GLM-5.1",
+        "GLM-5",
+        "GLM-4.7",
+        "GLM-4.7-Flash",
+        "GLM-4.6",
+        "GLM-4.5-Air",
+        "GLM-4.5",
+        "GLM-4.6V",
+        "GLM-4.6V-Flash",
+        "GLM-4V-Flash"
+      ],
+      "apiKeyUrl": "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+      "logo": "Zhipu"
+    },
+    {
+      "id": "zai-api",
+      "name": "Z.ai Coding Plan",
+      "group": "智谱",
+      "apiFormat": "anthropic-messages",
+      "baseUrl": "https://api.z.ai/api/anthropic",
+      "models": [
+        "GLM-5.3",
+        "GLM-5.3-Flash"
+      ],
+      "apiKeyUrl": "https://z.ai/manage-apikey/apikey-list",
+      "logo": "Zhipu"
+    },
+    {
+      "id": "zai-standard-api",
+      "name": "Z.ai API",
+      "group": "智谱",
+      "apiFormat": "openai-chat-completions",
+      "baseUrl": "https://api.z.ai/api/paas/v4",
+      "models": [
+        "GLM-5.3",
+        "GLM-5.3-Flash",
+        "GLM-5V-Turbo",
+        "GLM-5.1",
+        "GLM-5",
+        "GLM-4.7",
+        "GLM-4.6V",
+        "GLM-4V-Flash"
+      ],
+      "apiKeyUrl": "https://z.ai/manage-apikey/apikey-list",
+      "logo": "Zhipu"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "group": "其他",
+      "apiFormat": "anthropic-messages",
+      "baseUrl": "https://api.deepseek.com/anthropic",
+      "models": [
+        "deepseek-flash",
+        "deepseek-v4-pro"
+      ],
+      "apiKeyUrl": "https://platform.deepseek.com/api_keys",
+      "logo": "DeepSeek"
+    },
+    {
+      "id": "moonshot-kimi",
+      "name": "Kimi",
+      "group": "其他",
+      "apiFormat": "anthropic-messages",
+      "baseUrl": "https://api.moonshot.cn/anthropic",
+      "models": [
+        "kimi-k3.1-pro",
+        "kimi-k3",
+        "kimi-k2.6"
+      ],
+      "apiKeyUrl": "https://platform.kimi.com/console/api-keys",
+      "logo": "Moonshot"
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "group": "其他",
+      "apiFormat": "anthropic-messages",
+      "baseUrl": "https://api.minimaxi.com/anthropic",
+      "models": [
+        "MiniMax-M3.1-Flash",
+        "MiniMax-M3",
+        "MiniMax-M2.7"
+      ],
+      "apiKeyUrl": "https://platform.minimaxi.com/console/access?tab=api-keys",
+      "logo": "Minimax"
+    },
+    {
+      "id": "qwen-alibaba-model-studio-cn",
+      "name": "阿里云百炼（中国）",
+      "group": "其他",
+      "apiFormat": "anthropic-messages",
+      "baseUrl": "https://dashscope.aliyuncs.com/apps/anthropic",
+      "models": [
+        "qwen3.8-max",
+        "qwen3.8-flash",
+        "qwen3-max",
+        "qwen-plus",
+        "qwen-flash",
+        "qwen3-vl-plus"
+      ],
+      "apiKeyUrl": "https://bailian.console.aliyun.com/cn-beijing?tab=model",
+      "logo": "Qwen"
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "group": "其他",
+      "apiFormat": "openai-responses",
+      "baseUrl": "https://api.openai.com/v1",
+      "models": [
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano"
+      ],
+      "apiKeyUrl": "https://platform.openai.com/api-keys",
+      "logo": "OpenAI"
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "group": "其他",
+      "apiFormat": "anthropic-messages",
+      "baseUrl": "https://api.anthropic.com/v1",
+      "models": [
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-haiku-4-5-20251001"
+      ],
+      "apiKeyUrl": "https://console.anthropic.com/settings/keys",
+      "logo": "Claude"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "group": "其他",
+      "apiFormat": "anthropic-messages",
+      "baseUrl": "https://openrouter.ai/api",
+      "models": [
+        "z-ai/glm-5.3",
+        "deepseek/deepseek-v4.1-flash",
+        "anthropic/claude-sonnet-5",
+        "openai/gpt-5.4"
+      ],
+      "apiKeyUrl": "https://openrouter.ai/keys",
+      "logo": "OpenRouter"
+    }
+  ]
+}
