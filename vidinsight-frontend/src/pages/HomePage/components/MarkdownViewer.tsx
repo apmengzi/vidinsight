@@ -30,6 +30,7 @@ import VideoBanner from '@/pages/HomePage/components/VideoBanner.tsx'
 import NoteVideoPlayer from '@/pages/HomePage/components/NoteVideoPlayer.tsx'
 import { resolveAssetUrl } from '@/utils/image-url.ts'
 import { backfillKeyframes, buildOnePager } from '@/services/note.ts'
+import { scrollBehavior } from '@/utils/motion.ts'
 
 interface VersionNote {
   ver_id: string
@@ -238,9 +239,9 @@ function scrollTargetIntoView(target: Element) {
     const targetTop = target.getBoundingClientRect().top
     const viewportTop = viewport.getBoundingClientRect().top
     const offset = viewport.scrollTop + (targetTop - viewportTop) - 80
-    viewport.scrollTo({ top: offset, behavior: 'smooth' })
+    viewport.scrollTo({ top: offset, behavior: scrollBehavior() })
   } else {
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    target.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
   }
 }
 

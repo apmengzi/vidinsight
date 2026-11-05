@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react"
 import { Play } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {ScrollArea} from "@/components/ui/scroll-area.tsx";
+import { scrollBehavior } from "@/utils/motion.ts"
 
 interface Segment {
   start: number
@@ -43,7 +44,7 @@ const TranscriptViewer = () => {
 
   const scrollToSegment = (index: number) => {
     segmentRefs.current[index]?.scrollIntoView({
-      behavior: "smooth",
+      behavior: scrollBehavior(),
       block: "center",
     })
   }

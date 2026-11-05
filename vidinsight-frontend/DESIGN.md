@@ -85,10 +85,40 @@
 
 ## 6. 动效
 
+### 6a. 交互层（硬约束）
+
 - 160–240ms ease-out；不做渐变动画/粒子
 - 进度卡步骤推进：圆点一次 scale 弹跳（160ms）
 - 流式思考：行尾光标块 1.2s 呼吸；转写百分比数字滚动（tabular-nums）
 - 页面切换：仅内容区 fade 120ms，侧栏常驻
+
+### 6b. 氛围层（2026-11-05 新增，独立于交互层）
+
+交互层管「响应用户」，氛围层管「空闲时不像块死界面」。两者**独立成档**，
+不冲突：氛围动效周期 4s 起、幅度极小，且**用户一操作立刻让位**。
+
+- 周期分层：主反馈 0.6–0.9s（骨架/光标）、氛围呼吸 4s、极慢浮动 60s+
+- **相位错开**：同类元素必须给不同的负 `animationDelay`（Tailwind
+  任意值 `[-1.31s]`）+ 错开的 `animationDuration`，否则同频闪一眼模板感
+- 慢周期类名 `.vi-motion-breathe`（定义在 index.css），只用空闲装饰元素
+- 质感靠声明式：`repeating-linear-gradient` 刻度线可替代部分边框，
+  `mask`/`radialGradient` 做法参考，不新增图片资源
+
+### 6c. 无障碍（硬约束）
+
+`@media (prefers-reduced-motion: reduce)` 全局兜底写在 `index.css`：
+压 `animation-duration` / `transition-duration`、取消无限循环、关平滑滚动。
+JS 侧 `scrollTo` 统一走 `utils/motion.ts` 的 `scrollBehavior()`。
+**这类「一刀切但可覆盖」的规则放全局，不散落到组件。**
+
+### 6d. 渲染纪律
+
+- **声明式动画优先于 JS 定时器**：每秒 `setInterval` 只为更新一行文本时，
+  必须把那行拆成独立子组件，别让整张卡重渲染
+- **拖动期间写 DOM，不写 state**：`pointermove` 直接改 `style.transform`
+  （走合成层、不触发 layout），`pointerup` 才落一次 state + 持久化
+- 悬浮窗/收起态等**用户状态**必须持久化到 localStorage/IndexedDB，
+  不能因为「动画归动画」就丢状态
 
 ## 7. 文案语气
 

@@ -470,6 +470,57 @@ const STAGE_NAME_MAP: Record<string, string> = {
   SAVING: '存储',
 }
 
+// ====== 独立秒表（2026-11-05）======
+// 为什么拆出来：原来 TaskProgressCard 里每秒 setTickNow 会重渲染整张卡
+// （进度条、步骤条、按钮全跟着重绘），只为更新一行「已用 Xs」。
+// 拆成独立子组件后，每秒只有这个小组件重渲染，父卡片完全静止。
+function ElapsedTimer({ elapsed_s, progress, isRunning }: {
+  elapsed_s?: number
+  progress?: number
+  isRunning: boolean
+}) {
+  const [tickNow, setTickNow] = useState(() => Date.now())
+  const startRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!isRunning) return
+    const id = setInterval(() => setTickNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [isRunning])
+
+  // 用后端 elapsed_s 反推起始时刻（后端值更可信），无后端值时用首次渲染时刻
+  useEffect(() => {
+    if (typeof elapsed_s === 'number' && elapsed_s > 0) {
+      startRef.current = Date.now() - elapsed_s * 1000
+    } else if (startRef.current === null) {
+      startRef.current = Date.now()
+    }
+  }, [elapsed_s])
+
+  const live = isRunning && startRef.current !== null
+    ? Math.max(elapsed_s ?? 0, (tickNow - startRef.current) / 1000)
+    : elapsed_s
+
+  if (typeof live !== 'number' || live <= 0) return null
+
+  const fmt = (v: number) =>
+    v >= 60 ? `${Math.floor(v / 60)}m${Math.round(v % 60)}s` : `${Math.round(v)}s`
+  let estimate = ''
+  if (typeof progress === 'number' && progress > 5) {
+    const rate = progress / live
+    const remain = Math.max(0, (100 - progress) / rate)
+    if (remain > 2) estimate = ` · 约还需 ${remain >= 60 ? `${Math.round(remain / 60)}m` : `${Math.round(remain)}s`}`
+  }
+
+  return (
+    <span className="tc ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[11px] text-zinc-200"
+          title={typeof progress === 'number' && progress > 5
+            ? '按当前阶段进度速度估算，仅供参考' : undefined}>
+      已用 {fmt(live)}{estimate}
+    </span>
+  )
+}
+
 // ====== 进度卡片 ======
 function TaskProgressCard({
   taskStatus, taskTitle, taskId, onViewDetail, onStop, progress, failMsg,
@@ -490,28 +541,7 @@ function TaskProgressCard({
   /** 本次任务是否开启关键画面抽取（决定进度条是否显示「画面解析」这一步） */
   keyframeEnabled?: boolean
 }) {
-  // 本地秒表（2026-11-03）：后端 elapsed_s 只在 _update_status 被调用时重算，
-  // 而前端轮询是 3 秒一次，用户看到的「已用」会 3 秒跳一格，像卡住。
-  // 这里用本地时钟每秒自增，再用后端值做校准（取两者较大者，防止本地跑快）。
-  const [tickNow, setTickNow] = useState(() => Date.now())
-  const startRef = useRef<number | null>(null)
   const isRunning = !['SUCCESS', 'FAILED', 'CANCELLED'].includes(taskStatus)
-  useEffect(() => {
-    if (!isRunning) return
-    const id = setInterval(() => setTickNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [isRunning])
-  // 用后端 elapsed_s 反推起始时刻（后端值更可信），无后端值时用首次渲染时刻
-  useEffect(() => {
-    if (typeof elapsed_s === 'number' && elapsed_s > 0) {
-      startRef.current = Date.now() - elapsed_s * 1000
-    } else if (startRef.current === null) {
-      startRef.current = Date.now()
-    }
-  }, [elapsed_s])
-  const liveElapsed = isRunning && startRef.current !== null
-    ? Math.max(elapsed_s ?? 0, (tickNow - startRef.current) / 1000)
-    : elapsed_s
 
   if (taskStatus === 'CANCELLED') {
     return (
@@ -604,19 +634,8 @@ function TaskProgressCard({
             {getStageProgressLabel(taskStatus, progress)}
           </span>
         )}
-        {/* EVT Must Fix：已用时长 + 基于当前速率的粗估剩余（标注为估算，非承诺） */}
-        {typeof liveElapsed === 'number' && liveElapsed > 0 && (
-          <span className="tc ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[11px] text-zinc-200"
-                title={typeof progress === 'number' && progress > 5
-                  ? '按当前阶段进度速度估算，仅供参考' : undefined}>
-            已用 {liveElapsed >= 60 ? `${Math.floor(liveElapsed / 60)}m${Math.round(liveElapsed % 60)}s` : `${Math.round(liveElapsed)}s`}
-            {typeof progress === 'number' && progress > 5 && (() => {
-              const rate = progress / liveElapsed
-              const remain = Math.max(0, (100 - progress) / rate)
-              return remain > 2 ? ` · 约还需 ${remain >= 60 ? `${Math.round(remain / 60)}m` : `${Math.round(remain)}s`}` : ''
-            })()}
-          </span>
-        )}
+        {/* EVT Must Fix：已用时长 + 粗估剩余。独立组件，每秒只重渲染这一行 */}
+        <ElapsedTimer elapsed_s={elapsed_s} progress={progress} isRunning={isRunning} />
         <span className="tc ml-auto text-[11px] text-zinc-500">OVERALL {overallPct}%</span>
         <button
           onClick={() => onStop(taskId)}
@@ -1781,10 +1800,13 @@ export default function ChatPage() {
           <div className="w-full max-w-sm rounded-xl border border-[var(--vi-hairline)] bg-[var(--vi-surface)] p-3">
             <div className="flex items-center gap-3">
               <div className="h-10 w-0.5 rounded-full bg-[#E5484D]" />
+              {/* 相位错开（2026-11-05）：三条骨架原来同为 animate-pulse 同频闪，
+                  一眼模板感。给不同的负 delay + 错开 duration，开场即随机相位。
+                  零新增依赖；reduced-motion 由 index.css 全局兜底。 */}
               <div className="flex-1 space-y-2 py-0.5">
-                <div className="h-2.5 w-[40%] animate-pulse rounded bg-[var(--vi-hairline)]" />
-                <div className="h-2.5 w-[75%] animate-pulse rounded bg-[var(--vi-hairline)]" />
-                <div className="h-2.5 w-[60%] animate-pulse rounded bg-[var(--vi-hairline)]" />
+                <div className="h-2.5 w-[40%] animate-pulse rounded bg-[var(--vi-hairline)] [animation-delay:-0.62s] [animation-duration:720ms]" />
+                <div className="h-2.5 w-[75%] animate-pulse rounded bg-[var(--vi-hairline)] [animation-delay:-1.31s] [animation-duration:830ms]" />
+                <div className="h-2.5 w-[60%] animate-pulse rounded bg-[var(--vi-hairline)] [animation-delay:-0.24s] [animation-duration:660ms]" />
               </div>
             </div>
           </div>

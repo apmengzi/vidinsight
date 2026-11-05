@@ -84,15 +84,23 @@ export default function ChatFloatingWindow({
   const [minimized, setMinimized] = useState(false)
   const [dragging, setDragging] = useState(false)
 
-  // 最新几何的 ref：pointerup 落盘时避免读到渲染闭包里的旧 state
-  const geoRef = useRef(geo)
-  geoRef.current = geo
-
   const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null)
   const resizeRef = useRef<{ startX: number; startY: number; baseW: number; baseH: number } | null>(null)
 
+  // 最新几何的 ref：pointerup 落盘时避免读到渲染闭包里的旧 state。
+  // 注意只在**非拖动**时从 state 同步——拖动期间 ref 由 pointermove 直接
+  // 写入（DOM 已同步），若这里无条件覆盖会把拖动中的实时值冲掉。
+  const geoRef = useRef(geo)
+  if (!dragRef.current && !resizeRef.current) geoRef.current = geo
+
   const chatMessages = useChatStore(s => s.chatHistory[taskId])
   const clearChat = useChatStore(s => s.clearChat)
+
+  // 拖动/缩放期间的 DOM 引用：直接改 style 不触发 React 重渲染
+  // （2026-11-05 优化：原来每个 pointermove 都 setGeo，会把整棵 ChatPanel
+  //  子树一起重渲染。改成「动画归动画，数据归数据」——拖动期间只写 DOM，
+  //  pointerup 才把最终几何落一次 state + localStorage。）
+  const sectionRef = useRef<HTMLElement | null>(null)
 
   const persist = useCallback((g: Geometry) => {
     // 位置/尺寸持久化：刷新后窗口还在用户调好的地方（P0-2 验收点）
@@ -127,17 +135,27 @@ export default function ChatFloatingWindow({
       x: d.baseX + e.clientX - d.startX,
       y: d.baseY + e.clientY - d.startY,
     })
-    setGeo(g => (g.x === next.x && g.y === next.y ? g : { ...g, x: next.x, y: next.y }))
+    // 先记进 ref（endDrag 落盘要用），再直接写 DOM。
+    // 用 transform 位移而不是 left/top：走合成层，不触发 layout。
+    geoRef.current = { ...geoRef.current, x: next.x, y: next.y }
+    const el = sectionRef.current
+    if (el) {
+      el.style.transform = `translate(${next.x - geo.x}px, ${next.y - geo.y}px)`
+    }
   }
 
+  // 拖动/缩放结束时：清掉临时 transform，把最终几何写回 state 与存储。
+  // 只在这里重渲染一次，整棵子树在拖动过程中完全静止。
   const endDrag = () => {
-    if (dragRef.current) {
-      dragRef.current = null
-      persist(geoRef.current)
-    }
-    if (resizeRef.current) {
-      resizeRef.current = null
-      persist(geoRef.current)
+    const hadDrag = dragRef.current !== null || resizeRef.current !== null
+    dragRef.current = null
+    resizeRef.current = null
+    if (hadDrag) {
+      const g = geoRef.current
+      const el = sectionRef.current
+      if (el) el.style.transform = ''
+      setGeo(g)
+      persist(g)
     }
     setDragging(false)
   }
@@ -162,9 +180,13 @@ export default function ChatFloatingWindow({
       w: r.baseW + e.clientX - r.startX,
       h: r.baseH + e.clientY - r.startY,
     })
-    setGeo(g =>
-      g.w === next.w && g.h === next.h ? g : { ...g, w: next.w, h: next.h },
-    )
+    // 缩放同理：拖动期间直接写 DOM 尺寸，不触发 React 重渲染
+    geoRef.current = { ...geoRef.current, w: next.w, h: next.h }
+    const el = sectionRef.current
+    if (el) {
+      el.style.width = `${next.w}px`
+      el.style.height = `${next.h}px`
+    }
   }
 
   // ===== 最小化态：右下角圆形气泡，点击恢复 =====
@@ -185,6 +207,7 @@ export default function ChatFloatingWindow({
 
   return (
     <section
+      ref={sectionRef}
       style={{ left: geo.x, top: geo.y, width: geo.w, height: geo.h }}
       className={
         'fixed z-50 flex flex-col overflow-hidden rounded-xl border border-[var(--vi-hairline)] bg-[var(--vi-surface)] shadow-[0_12px_32px_rgba(23,25,30,0.16)] ' +

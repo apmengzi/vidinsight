@@ -210,3 +210,42 @@ html.dark body { background-color: var(--vi-bg); }
   min-width: 0 !important;
   width: 100% !important;
 }
+
+/* ---------------------------------------------------------------------------
+ * 系统级「减弱动效」兜底（2026-11-05）
+ *
+ * 为什么放全局而不散到组件：这是一刀切但可覆盖的规则，DESIGN.md 的
+ * 「160–240ms ease-out」是交互层规范，无障碍降级不该要求每个组件各自实现。
+ * 一次覆盖：骨架屏/REC 点/加载转圈、所有过渡、平滑滚动、氛围呼吸动画。
+ *
+ * 注意用 !important：组件里的 Tailwind `animate-*` / `transition-*` 工具类
+ * 优先级与媒体查询规则相当，不加会被工具类覆盖而漏掉。
+ * 只压时长和取消动画，不改布局/透明度终值，所以视觉状态不会丢。
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* 悬浮窗/弹层这类靠 transition 做位置的，降级后直接落到终态 */
+  .vi-motion-breathe { animation: none !important; }
+}
+
+/* ---------------------------------------------------------------------------
+ * 氛围层：慢周期呼吸（与交互层 duration-150/200/300 独立成档）
+ *
+ * 只在空闲装饰元素上用，用户操作时立刻让位（hover 态由组件自己覆盖）。
+ * 相位错开靠调用方给负 animationDelay，避免所有元素同频闪。
+ * ------------------------------------------------------------------------- */
+@keyframes vi-breathe {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}
+.vi-motion-breathe {
+  animation: vi-breathe 4s ease-in-out infinite;
+}
+
