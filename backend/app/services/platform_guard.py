@@ -94,11 +94,20 @@ def check_xhs_cookie() -> dict:
     406 `{"code":-1}` 或 500 `create invoker failed`（本次实测，真实与伪造
     cookie 返回完全一致）—— 不可用。
 
-    改用 SSR 页面里的登录态标志（实测可判别）：
-      - `https://www.xiaohongshu.com/explore` 带 cookie → `"loggedIn":true`
-      - 同一 URL 带伪造 web_session / 不带 cookie → `"loggedIn":false`
-      - 有效态下 `/user/profile/me` 返回 404（路由不存在但已登录），
-        失效态 302 跳 `/login` —— 作为交叉验证。
+    判别方式（2026-11-05 重写，修误报）：
+
+    **不能只看 `/explore` 的 `"loggedIn"` 标志**。实测发现：真实有效的
+    cookie（web_session/id_token/a1 齐全）访问 `/explore` 仍返回
+    `"loggedIn":false` —— 这个字段反映的是「SSR 渲染时的登录态快照」，
+    对带 cookie 的普通 HTTP 请求不可靠，导致用户明明登录着却被报「已过期」。
+
+    改用 `/user/profile/me` 的**状态码**判别（实测三态清晰）：
+      - 真实有效 cookie → **404**（路由不存在，但请求被放行）
+      - 伪造 web_session → **500**（服务端解析会话失败）
+      - 无 cookie        → **302** 跳 /explore 或 /login
+
+    同时保留 `/explore` 的 loggedIn 作为**加分项**：任一信号为真即判有效，
+    两个都为假才判失效——宁可少报错，不要误伤用户。
     """
     cookie = CookieConfigManager().get("xiaohongshu")
     if not cookie:
@@ -118,24 +127,44 @@ def check_xhs_cookie() -> dict:
         "Referer": "https://www.xiaohongshu.com/",
         "Cookie": cookie,
     }
+
+    # 主判据：/user/profile/me 的状态码
+    me_status = None
+    try:
+        me = requests.get("https://www.xiaohongshu.com/user/profile/me",
+                          headers=headers, timeout=10, allow_redirects=False)
+        me_status = me.status_code
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"小红书 /user/profile/me 探测异常: {e}")
+
+    # 辅助判据：/explore 的 loggedIn（可能为 false，仅作加分）
+    explore_logged_in = False
     try:
         resp = requests.get("https://www.xiaohongshu.com/explore",
                             headers=headers, timeout=10)
-        if resp.status_code != 200:
-            return {"platform": "xiaohongshu", "status": "unknown",
-                    "detail": f"探测页返回 HTTP {resp.status_code}",
-                    "action": ""}
-        if '"loggedIn":true' in resp.text:
-            return {"platform": "xiaohongshu", "status": "logged_in",
-                    "detail": "登录态有效", "action": ""}
+        explore_logged_in = '"loggedIn":true' in resp.text
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"小红书 /explore 探测异常: {e}")
+
+    # 404 = 已登录（路由不存在但请求放行）；200/500/302 = 视情况
+    if me_status == 404 or explore_logged_in:
+        return {"platform": "xiaohongshu", "status": "logged_in",
+                "detail": "登录态有效", "action": ""}
+
+    if me_status == 500:
         return {"platform": "xiaohongshu", "status": "expired",
-                "detail": "登录态已失效（页面显示未登录）",
+                "detail": "登录态已失效（服务端拒绝该会话）",
                 "action": "登录态已过期，请打开捕获窗口重新登录"}
-    except Exception as e:  # noqa: BLE001 —— 探测失败不阻塞业务，降级 unknown
-        logger.warning(f"小红书 Cookie 健康探测异常: {e}")
+
+    if me_status is None:
+        # 两个探测都失败：网络问题，不能判用户登录态失效
         return {"platform": "xiaohongshu", "status": "unknown",
-                "detail": f"探测请求失败（{str(e)[:60]}），Cookie 配置存在",
+                "detail": "探测请求失败，无法确认登录态（Cookie 配置存在）",
                 "action": ""}
+
+    return {"platform": "xiaohongshu", "status": "expired",
+            "detail": f"登录态已失效（profile 返回 {me_status}）",
+            "action": "登录态已过期，请打开捕获窗口重新登录"}
 
 
 def check_platform_cookie(platform: str) -> dict:
