@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { SlidersHorizontal, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -23,7 +23,7 @@ const HomeLayout: React.FC<IProps> = ({ NoteForm, Preview }) => {
   const leftPanelRef = useRef<ImperativePanelHandle>(null)
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="relative flex h-full flex-col overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full w-full">
         {/* 左边表单 */}
         <ResizablePanel
@@ -51,9 +51,12 @@ const HomeLayout: React.FC<IProps> = ({ NoteForm, Preview }) => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
+                      {/* P1-2：全局统一圆形图标按钮（h-8 w-8 rounded-full，
+                          与 AppLayout 侧栏按钮同形态），不允许长条形 */}
                       <button
                         onClick={() => leftPanelRef.current?.collapse()}
-                        className="text-muted-foreground hover:text-primary cursor-pointer rounded p-1 hover:bg-neutral-100"
+                        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-neutral-100 hover:text-primary"
+                        aria-label="收起工作区"
                       >
                         <PanelLeftClose className="h-4 w-4" />
                       </button>
@@ -73,14 +76,19 @@ const HomeLayout: React.FC<IProps> = ({ NoteForm, Preview }) => {
 
         <ResizableHandle />
 
-        {/* 左面板折叠时的展开按钮 */}
+        {/* 左面板折叠后的展开按钮
+            P1-2 修复：旧版是 w-8 h-full 的全高长条按钮（占满左缘一整条），
+            用户看到「两个大长条」不知道点哪个；且长条不可识别为按钮。
+            改为圆形悬浮按钮（h-8 w-8 rounded-full），贴左缘 top 位，
+            与 AppLayout 侧栏展开按钮形态完全一致——全局只有一个按钮形状。 */}
         {isLeftCollapsed && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => leftPanelRef.current?.expand()}
-                  className="flex h-full w-8 shrink-0 items-center justify-center border-r border-neutral-200 bg-white hover:bg-neutral-50"
+                  className="absolute left-2 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white shadow-sm transition-colors hover:bg-neutral-50"
+                  aria-label="展开工作区"
                 >
                   <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
                 </button>

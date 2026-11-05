@@ -27,6 +27,10 @@ export interface ConversationTaskProgress {
   failMsg?: string
   /** 后端阶段提示（如「正在加载转写模型（首次约 20 秒…）」）——进度卡副行展示 */
   message?: string
+  /** P2-2（2026-11-05）：提交这条任务的那条用户消息在 messages 里的下标。
+   *  渲染时进度/完成卡挂在它下面——卡片跟着「提交它的上下文」走，
+   *  不再作为会话级尾巴堆在消息流底部（多轮对话后旧完成卡一直漂在最底）。 */
+  anchorMessageIndex?: number
 }
 
 export interface Conversation {

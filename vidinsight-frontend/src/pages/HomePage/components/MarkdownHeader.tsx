@@ -311,8 +311,12 @@ export function MarkdownHeader({
         )}
       </div>
 
-      {/* 右侧操作按钮 */}
-      <div className="flex items-center gap-1">
+      {/* 右侧操作按钮
+          2026-11-05 修复：原来是不换行的 flex，1280 视口（正文区约 700px）下
+          7 个带文字的按钮总宽超出容器，「洞察问答」等按钮被挤出视口右缘
+          （CDP 实测 right=1370 > 1280）。加 flex-wrap + min-w-0 让按钮组
+          自动换行，宁可 header 高一行也不溢出屏幕。 */}
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

@@ -8,7 +8,7 @@ import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import {
   UserRound, Bot, Loader2, Sparkles, CheckCircle2, XCircle,
-  ExternalLink, BookOpen, Brain, Zap,
+  ExternalLink, BookOpen, Brain, Zap, ImagePlus, Download,
 } from 'lucide-react'
 import { useConversationStore, type Conversation, type ConversationTaskProgress } from '@/store/conversationStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -74,10 +74,13 @@ function extractVideoLinks(text: string): string[] {
 }
 
 // ====== 生成步骤 ======
+// 关键画面抽取在转写之后、总结之前执行（后端 note.py 的 2.8 阶段），
+// 所以插在「转写文字」和「总结内容」之间。未开启关键帧时这一步会跳过。
 const STEPS = [
   { label: '解析链接', key: 'PARSING' },
   { label: '下载音频', key: 'DOWNLOADING' },
   { label: '转写文字', key: 'TRANSCRIBING' },
+  { label: '画面解析', key: 'KEYFRAME' },
   { label: '总结内容', key: 'SUMMARIZING' },
   { label: '保存完成', key: 'SUCCESS' },
 ]
@@ -87,6 +90,12 @@ const AUTO_GEN_DEFAULTS = {
   style: 'adaptive',
   quality: 'medium',
   video_understand: false,
+  // 关键画面抽取：把视频里"只存在于画面"的信息（参数对比表、食材清单、
+  // 原理图、描点站位）截图 + 转成表格写进笔记。
+  // 默认关闭（2026-11-03 用户要求）：视觉分析会让任务慢 3-5 倍，
+  // 不需要画面的视频不该为它买单。需要时在「内容分析」页勾选，
+  // 或事后在「分析历史」里对已有笔记补做。
+  keyframe_extract: false,
   format: ['link', 'summary'] as string[],
   extras: '请按内容洞察口径输出：视频主题、核心观点、关键信息与可复用的知识点。报告标题必须使用“# 内容洞察报告：视频标题”，如果原始标题缺失，请根据链接平台或视频内容生成一个简短标题。不要手写目录，前端会统一生成一个简洁目录。',
   grid_size: [3, 3],
@@ -96,6 +105,8 @@ type BatchTaskProgress = {
   taskId: string
   /** 提交时刻的会话快照：轮询靠它定位目标会话（见 startPolling 闭包修复） */
   conversationId?: string
+  /** P2-2：提交这条任务的用户消息下标，渲染时卡片挂在它下面 */
+  anchorMessageIndex?: number
   status: string
   title?: string
   url: string
@@ -112,6 +123,8 @@ type BatchTaskProgress = {
   failMsg?: string
   /** 后端阶段提示（如「正在加载转写模型」），进度卡副行展示 */
   message?: string
+  /** 提交时是否开启关键画面抽取（决定进度条是否显示「画面解析」步骤） */
+  keyframeEnabled?: boolean
 }
 
 function getFallbackTaskTitle(url: string, index: number): string {
@@ -207,6 +220,16 @@ function AgentThinking({ toolCalls, thinkingText, streaming, liveToolEvents }: {
   const liveEvents = liveToolEvents ?? []
   const stepCount = liveEvents.length || toolCalls.length
 
+  // P2-1（2026-11-05）：折叠态也要有信息密度——用户不展开就该知道
+  // 这轮用了几个工具、花了多久。旧版折叠后只剩 "TRACE / 02 STEP"，
+  // mono 数字对工程师友好但对内容运营是黑盒。
+  const totalElapsed = (liveEvents.length ? liveEvents : toolCalls).reduce(
+    (sum, t) => sum + (t.elapsed_s ?? 0),
+    0,
+  )
+  const fmtSecs = (s: number) =>
+    s >= 60 ? `${Math.floor(s / 60)}m${Math.round(s % 60)}s` : `${s < 10 ? s.toFixed(1) : Math.round(s)}s`
+
   const labelMap: Record<string, string> = {
     // consume
     search_kb: '搜索洞察库',
@@ -259,7 +282,10 @@ function AgentThinking({ toolCalls, thinkingText, streaming, liveToolEvents }: {
             />
           )}
           <span className="tc ml-auto shrink-0 text-[11px] tabular-nums text-[var(--vi-ink-3)]">
-            {stepCount > 0 ? `${String(stepCount).padStart(2, '0')} STEP` : ''}
+            {/* P2-1：折叠态摘要——工具数 + 累计耗时（仅已完成工具的真实耗时，
+                流式中实时累加，不伪造整轮时长） */}
+            {stepCount > 0 ? `${stepCount} 个工具调用` : ''}
+            {totalElapsed > 0 ? ` · ${fmtSecs(totalElapsed)}` : ''}
           </span>
           <span className="tc shrink-0 text-[10px] text-[var(--vi-ink-3)]">{expanded ? '▲' : '▼'}</span>
         </button>
@@ -447,7 +473,7 @@ const STAGE_NAME_MAP: Record<string, string> = {
 // ====== 进度卡片 ======
 function TaskProgressCard({
   taskStatus, taskTitle, taskId, onViewDetail, onStop, progress, failMsg,
-  elapsed_s, stage_times, message,
+  elapsed_s, stage_times, message, keyframeEnabled,
 }: {
   taskStatus: string; taskTitle?: string; taskId: string
   onViewDetail: () => void; onStop: (taskId: string) => void
@@ -461,7 +487,32 @@ function TaskProgressCard({
   stage_times?: Record<string, number>
   /** 后端阶段提示（如转写模型加载中） */
   message?: string
+  /** 本次任务是否开启关键画面抽取（决定进度条是否显示「画面解析」这一步） */
+  keyframeEnabled?: boolean
 }) {
+  // 本地秒表（2026-11-03）：后端 elapsed_s 只在 _update_status 被调用时重算，
+  // 而前端轮询是 3 秒一次，用户看到的「已用」会 3 秒跳一格，像卡住。
+  // 这里用本地时钟每秒自增，再用后端值做校准（取两者较大者，防止本地跑快）。
+  const [tickNow, setTickNow] = useState(() => Date.now())
+  const startRef = useRef<number | null>(null)
+  const isRunning = !['SUCCESS', 'FAILED', 'CANCELLED'].includes(taskStatus)
+  useEffect(() => {
+    if (!isRunning) return
+    const id = setInterval(() => setTickNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [isRunning])
+  // 用后端 elapsed_s 反推起始时刻（后端值更可信），无后端值时用首次渲染时刻
+  useEffect(() => {
+    if (typeof elapsed_s === 'number' && elapsed_s > 0) {
+      startRef.current = Date.now() - elapsed_s * 1000
+    } else if (startRef.current === null) {
+      startRef.current = Date.now()
+    }
+  }, [elapsed_s])
+  const liveElapsed = isRunning && startRef.current !== null
+    ? Math.max(elapsed_s ?? 0, (tickNow - startRef.current) / 1000)
+    : elapsed_s
+
   if (taskStatus === 'CANCELLED') {
     return (
       <div className="my-3 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
@@ -526,10 +577,12 @@ function TaskProgressCard({
     )
   }
 
-  const currentIdx = STEPS.findIndex(s => s.key === taskStatus)
-  const currentLabel = STEPS[currentIdx]?.label || '处理中'
+  // 未开启关键画面抽取时隐藏「画面解析」这一步——否则它会永远停在未完成态
+  const steps = keyframeEnabled ? STEPS : STEPS.filter(s => s.key !== 'KEYFRAME')
+  const currentIdx = steps.findIndex(s => s.key === taskStatus)
+  const currentLabel = steps[currentIdx]?.label || '处理中'
   const overallPct = Math.round(
-    ((currentIdx < 0 ? 0 : currentIdx) + (typeof progress === 'number' ? progress / 100 : 0.5)) / STEPS.length * 100,
+    ((currentIdx < 0 ? 0 : currentIdx) + (typeof progress === 'number' ? progress / 100 : 0.5)) / steps.length * 100,
   )
 
   return (
@@ -552,13 +605,13 @@ function TaskProgressCard({
           </span>
         )}
         {/* EVT Must Fix：已用时长 + 基于当前速率的粗估剩余（标注为估算，非承诺） */}
-        {typeof elapsed_s === 'number' && elapsed_s > 0 && (
+        {typeof liveElapsed === 'number' && liveElapsed > 0 && (
           <span className="tc ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[11px] text-zinc-200"
                 title={typeof progress === 'number' && progress > 5
                   ? '按当前阶段进度速度估算，仅供参考' : undefined}>
-            已用 {elapsed_s >= 60 ? `${Math.floor(elapsed_s / 60)}m${Math.round(elapsed_s % 60)}s` : `${Math.round(elapsed_s)}s`}
+            已用 {liveElapsed >= 60 ? `${Math.floor(liveElapsed / 60)}m${Math.round(liveElapsed % 60)}s` : `${Math.round(liveElapsed)}s`}
             {typeof progress === 'number' && progress > 5 && (() => {
-              const rate = progress / elapsed_s
+              const rate = progress / liveElapsed
               const remain = Math.max(0, (100 - progress) / rate)
               return remain > 2 ? ` · 约还需 ${remain >= 60 ? `${Math.round(remain / 60)}m` : `${Math.round(remain)}s`}` : ''
             })()}
@@ -576,10 +629,10 @@ function TaskProgressCard({
         {taskTitle && <p className="mb-3 truncate text-xs text-ink-2">{taskTitle}</p>}
         {/* 轨道化步骤条：teal✓ 已完成 / rec 播放头当前 / 灰空心未来，连线随进度填充 */}
         <div className="flex items-start">
-          {STEPS.map((step, i) => {
+          {steps.map((step, i) => {
             const done = i < currentIdx
             const active = i === currentIdx
-            const last = i === STEPS.length - 1
+            const last = i === steps.length - 1
             return (
               <div key={step.key} className="flex min-w-0 flex-1 flex-col items-center">
                 <div className="flex w-full items-center">
@@ -598,7 +651,23 @@ function TaskProgressCard({
                   {!done && !active && (
                     <span className="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-hairline bg-white" />
                   )}
-                  <div className={`h-[3px] flex-1 rounded-r ${last ? 'opacity-0' : i < currentIdx ? 'bg-teal-ok/70' : 'bg-hairline'}`} />
+                  {/* 当前节点右侧的连线按「本阶段已完成比例」渐变填充，
+                      避免出现「左亮右灰」的视觉断裂（用户反馈：跑到哪就断开） */}
+                  <div className="relative h-[3px] flex-1 overflow-hidden rounded-r">
+                    <div className="absolute inset-0 bg-hairline" />
+                    {!last && (
+                      <div
+                        className="absolute inset-y-0 left-0 bg-teal-ok/70 transition-[width] duration-300"
+                        style={{
+                          width: done
+                            ? '100%'
+                            : active && typeof progress === 'number' && Number.isFinite(progress)
+                              ? `${Math.max(0, Math.min(100, progress))}%`
+                              : '0%',
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
                 <span className={`mt-1.5 whitespace-nowrap text-[11px] ${active ? 'font-medium text-rec' : done ? 'text-teal-ok' : 'text-ink-3'}`}>
                   {step.label}
@@ -757,6 +826,32 @@ export default function ChatPage() {
     })
   }, [])
 
+  // 关键画面抽取开关（对话页）：默认关闭，持久化到 localStorage。
+  // 开启后任务慢 3-5 倍（逐帧视觉分析），只在需要截参数表/清单/描点时开。
+  const [keyframeOn, setKeyframeOn] = useState<boolean>(
+    () => localStorage.getItem('vidinsight_keyframe_on') === '1',
+  )
+  // 保存原片开关（离线回看）：默认关闭，持久化
+  const [archiveOn, setArchiveOn] = useState<boolean>(
+    () => localStorage.getItem('vidinsight_archive_on') === '1',
+  )
+  const toggleArchive = useCallback(() => {
+    setArchiveOn(prev => {
+      const next = !prev
+      localStorage.setItem('vidinsight_archive_on', next ? '1' : '0')
+      toast.success(next ? '原片将保存到本地（笔记页可离线播放）' : '不再保存原片')
+      return next
+    })
+  }, [])
+  const toggleKeyframe = useCallback(() => {
+    setKeyframeOn(prev => {
+      const next = !prev
+      localStorage.setItem('vidinsight_keyframe_on', next ? '1' : '0')
+      toast.success(next ? '关键画面抽取已开启（任务约慢 3-5 倍）' : '关键画面抽取已关闭')
+      return next
+    })
+  }, [])
+
   // 内容洞察生成进度：挂到会话记录上（跨会话切换/路由跳转持久，不再用组件 state）
 
   useEffect(() => { loadEnabledModels() }, [loadEnabledModels])
@@ -898,8 +993,25 @@ export default function ChatPage() {
     const candidates = keyed.size
       ? modelList.filter(m => keyed.has(String(m.provider_id)))
       : modelList
-    return candidates.find(m => m.model_name === 'deepseek-v4-pro')
-      || candidates[0]
+    // 默认模型优先级（2026-11-03）：优先选「支持读图 + 不依赖本机」的模型。
+    // deepseek-ai/DeepSeek-V4.1-Flash-1017（Systalyze）直连可访问，用户
+    // 关电脑也能用；deepseek-v4.1-flash（workbuddy 反代）更快但要走本机隧道。
+    // 网页版应当优先前者——功能可用性 > 速度。
+    const PREFERRED = [
+      'deepseek-ai/DeepSeek-V4.1-Flash-1017',
+      'deepseek-v4.1-flash',
+      'deepseek-v4.1-flash-1017',
+    ]
+    for (const name of PREFERRED) {
+      const hit = candidates.find(m => m.model_name === name)
+      if (hit) return hit
+    }
+    // 其次：任何标记了支持读图的模型
+    const vision = candidates.find(
+      m => (m.capabilities as any)?.inputFormat?.supportsImage,
+    )
+    if (vision) return vision
+    return candidates[0]
       // 兜底：过滤后为空但 modelList 非空时退回全量列表首个，保持旧行为
       || modelList[0]
       || null
@@ -1182,6 +1294,12 @@ export default function ChatPage() {
 
     // 用户消息先行入列：合集预检/收割的进度气泡要排在它后面
     addMessage(conversationId, { role: 'user', content: text })
+    // P2-2：刚入列的这条用户消息就是本轮任务的「锚点」——
+    // 进度/完成卡渲染时挂在它下面，跟提交上下文走（ getState 取实时下标，
+    // 不受后续合集气泡 addMessage 影响 ）
+    const userMsgIndex =
+      (useConversationStore.getState().conversations.find(c => c.id === conversationId)
+        ?.messages.length ?? 1) - 1
     setInput('')
     setLoading(true)
 
@@ -1359,6 +1477,8 @@ export default function ChatPage() {
             format: AUTO_GEN_DEFAULTS.format,
             extras: AUTO_GEN_DEFAULTS.extras,
             video_understand: AUTO_GEN_DEFAULTS.video_understand,
+            keyframe_extract: keyframeOn,
+            archive_video: archiveOn,
             grid_size: AUTO_GEN_DEFAULTS.grid_size,
           }
 
@@ -1388,11 +1508,14 @@ export default function ChatPage() {
           const progressItems: BatchTaskProgress[] = submitted.map(item => ({
             taskId: item.taskId,
             conversationId,
+            anchorMessageIndex: userMsgIndex,
             status: 'PENDING',
             url: item.url,
             platform: item.platform,
             index: item.index,
             title: getFallbackTaskTitle(item.url, item.index),
+            // 记下提交时的开关状态：进度条据此决定是否显示「画面解析」步骤
+            keyframeEnabled: keyframeOn,
           }))
           commitTaskProgresses(progressItems)
           progressItems.forEach(startPolling)
@@ -1444,7 +1567,7 @@ export default function ChatPage() {
       setStreamActive(false)
       streamAbortRef.current = null
     }
-  }, [loading, conversationId, addMessage, updateMessage, targetModel, manualModel, addPendingTask, startPolling, handleAgentChat, premiumRouter])
+  }, [loading, conversationId, addMessage, updateMessage, targetModel, manualModel, addPendingTask, startPolling, handleAgentChat, premiumRouter, keyframeOn, archiveOn])
 
   // ====== 渲染 AI 消息 ======
   const renderAIContent = useCallback((content: string, msgIndex: number) => {
@@ -1565,11 +1688,90 @@ export default function ChatPage() {
 
   // ====== Bubble items ======
   const bubbleItems = useMemo(() => {
-    const items = messages.map((msg, i) => ({
-      key: `msg-${i}`,
-      role: msg.role === 'user' ? ('user' as const) : ('ai' as const),
-      content: msg.role === 'assistant' ? renderAIContent(msg.content, i) : msg.content,
-    }))
+    // P2-2（2026-11-05 二段修复）：任务卡按 anchorMessageIndex 挂到
+    // 对应用户消息后面。此前虽已并入消息流（不再是列表外独立块），
+    // 但仍是「整个 taskProgresses 数组 append 到列表尾」——多轮提交后，
+    // 前面轮次的完成卡永远漂在最底部，像僵尸卡片。
+    // 锚定后每张卡跟着提交它的那条用户消息走；
+    // 无锚点的老数据（2026-11-05 之前提交）保持挂尾部，不丢显示。
+    const anchored = new Map<number, BatchTaskProgress[]>()
+    const unanchored: BatchTaskProgress[] = []
+    for (const t of taskProgresses) {
+      if (typeof t.anchorMessageIndex === 'number' && t.anchorMessageIndex >= 0) {
+        const list = anchored.get(t.anchorMessageIndex)
+        if (list) list.push(t)
+        else anchored.set(t.anchorMessageIndex, [t])
+      } else {
+        unanchored.push(t)
+      }
+    }
+
+    const renderTaskCards = (list: BatchTaskProgress[]) => (
+      <div className="space-y-2">
+        {list.map(task => (
+          <TaskProgressCard
+            key={task.taskId}
+            taskStatus={task.status}
+            taskTitle={task.title}
+            taskId={task.taskId}
+            progress={task.progress}
+            elapsed_s={task.elapsed_s}
+            stage_times={task.stage_times}
+            failMsg={task.failMsg}
+            message={task.message}
+            keyframeEnabled={task.keyframeEnabled}
+            onViewDetail={() => navigate(`/history/${task.taskId}`)}
+            onStop={handleStopTask}
+          />
+        ))}
+      </div>
+    )
+
+    const items = messages.flatMap((msg, i) => {
+      const self = {
+        key: `msg-${i}`,
+        role: msg.role === 'user' ? ('user' as const) : ('ai' as const),
+        content: msg.role === 'assistant' ? renderAIContent(msg.content, i) : msg.content,
+      }
+      const tasks = anchored.get(i)
+      if (!tasks || tasks.length === 0) return [self]
+      return [
+        self,
+        {
+          key: `task-progress-${i}`,
+          role: 'ai' as const,
+          content: renderTaskCards(tasks),
+        } as any,
+      ]
+    })
+
+    // 思考链（2026-11-05 已并入消息流）：内存态只反映最新一轮问答，
+    // 挂在列表尾 = 跟着最新一条回复，符合阅读时序
+    const hasAgentActivity =
+      agentToolCalls.length > 0 || !!streamThinking || (streamToolEvents?.length ?? 0) > 0
+    if (hasAgentActivity) {
+      items.push({
+        key: 'agent-thinking',
+        role: 'ai' as const,
+        content: (
+          <AgentThinking
+            toolCalls={agentToolCalls}
+            thinkingText={streamThinking}
+            streaming={streamActive && loading}
+            liveToolEvents={streamToolEvents}
+          />
+        ),
+      } as any)
+    }
+
+    // 老数据兜底：无锚点任务卡（2026-11-05 前提交的）保持原位（列表尾）
+    if (unanchored.length > 0) {
+      items.push({
+        key: 'task-progress-legacy',
+        role: 'ai' as const,
+        content: renderTaskCards(unanchored),
+      } as any)
+    }
 
     if (loading) {
       items.push({
@@ -1591,7 +1793,8 @@ export default function ChatPage() {
     }
 
     return items
-  }, [messages, loading, renderAIContent])
+  }, [messages, loading, renderAIContent, agentToolCalls, streamThinking,
+      streamActive, streamToolEvents, taskProgresses, navigate, handleStopTask])
 
   const placeholderText = kbStats && kbStats.total_notes > 0
     ? `向 ${kbStats.total_notes} 条内容分析记录提问，或粘贴视频链接生成新洞察…`
@@ -1683,33 +1886,6 @@ export default function ChatPage() {
           ) : (
             <>
               <Bubble.List items={bubbleItems} role={roles} style={{ minHeight: '100%' }} />
-
-              <AgentThinking
-                toolCalls={agentToolCalls}
-                thinkingText={streamThinking}
-                streaming={streamActive && loading}
-                liveToolEvents={streamToolEvents}
-              />
-
-              {taskProgresses.length > 0 && (
-                <div className="ml-12 max-w-[85%] space-y-2">
-                  {taskProgresses.map(task => (
-                    <TaskProgressCard
-                      key={task.taskId}
-                      taskStatus={task.status}
-                      taskTitle={task.title}
-                      taskId={task.taskId}
-                      progress={task.progress}
-                      elapsed_s={task.elapsed_s}
-                      stage_times={task.stage_times}
-                      failMsg={task.failMsg}
-                      message={task.message}
-                      onViewDetail={() => navigate(`/history/${task.taskId}`)}
-                      onStop={handleStopTask}
-                    />
-                  ))}
-                </div>
-              )}
             </>
           )}
         </div>
@@ -1754,6 +1930,37 @@ export default function ChatPage() {
                   ? <Loader2 className="h-3 w-3 animate-spin" />
                   : <Zap className="h-3 w-3" />}
                 高阶意图路由{premiumRouter ? ' · 已开启' : ''}
+              </button>
+
+              {/* 关键画面抽取开关：截取视频里的参数表/清单/原理图/描点站位。
+                  默认关闭——逐帧视觉分析会让任务慢 3-5 倍。 */}
+              <button
+                onClick={toggleKeyframe}
+                title="截取视频里的参数表、清单、原理图、描点站位并写进笔记。开启后任务约慢 3-5 倍，需要模型支持读图"
+                className={
+                  'ml-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-2 py-0.5 text-[10px] normal-case tracking-normal transition-colors ' +
+                  (keyframeOn
+                    ? 'border-[var(--vi-ink)] bg-[var(--vi-ink)] text-[var(--vi-bg)] hover:bg-[#2A2F36]'
+                    : 'border-[var(--vi-hairline)] text-[var(--vi-ink-3)] hover:border-[var(--vi-ink-3)] hover:text-[var(--vi-ink-2)]')
+                }
+              >
+                <ImagePlus className="h-3 w-3" />
+                关键画面{keyframeOn ? ' · 已开启' : ''}
+              </button>
+
+              {/* 保存原片开关：归档到本地，笔记页可离线播放 */}
+              <button
+                onClick={toggleArchive}
+                title="把原片保存到本地，笔记页可直接播放，断网也能看。会让任务多下载一次完整视频（约 80-150MB）"
+                className={
+                  'ml-1 inline-flex shrink-0 items-center gap-1 rounded-sm border px-2 py-0.5 text-[10px] normal-case tracking-normal transition-colors ' +
+                  (archiveOn
+                    ? 'border-[var(--vi-ink)] bg-[var(--vi-ink)] text-[var(--vi-bg)] hover:bg-[#2A2F36]'
+                    : 'border-[var(--vi-hairline)] text-[var(--vi-ink-3)] hover:border-[var(--vi-ink-3)] hover:text-[var(--vi-ink-2)]')
+                }
+              >
+                <Download className="h-3 w-3" />
+                存原片{archiveOn ? ' · 已开启' : ''}
               </button>
             </div>
 

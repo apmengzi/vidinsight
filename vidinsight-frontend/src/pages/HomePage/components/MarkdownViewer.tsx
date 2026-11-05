@@ -25,11 +25,11 @@ import { MarkdownHeader, ReportMasthead } from '@/pages/HomePage/components/Mark
 import TranscriptViewer from '@/pages/HomePage/components/transcriptViewer.tsx'
 import MarkmapEditor from '@/pages/HomePage/components/MarkmapComponent.tsx'
 import ChatPanel from '@/pages/HomePage/components/ChatPanel.tsx'
+import ChatFloatingWindow from '@/pages/HomePage/components/ChatFloatingWindow.tsx'
 import VideoBanner from '@/pages/HomePage/components/VideoBanner.tsx'
 import NoteVideoPlayer from '@/pages/HomePage/components/NoteVideoPlayer.tsx'
 import { resolveAssetUrl } from '@/utils/image-url.ts'
 import { backfillKeyframes, buildOnePager } from '@/services/note.ts'
-import { resolveAssetUrl } from '@/utils/image-url.ts'
 
 interface VersionNote {
   ver_id: string
@@ -1113,11 +1113,18 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
                   <TranscriptViewer />
                 </div>
               )}
-              {/* 侧边问答模式：markdown + ChatPanel 各占一半 */}
+              {/* 洞察问答（P0-2 方案 B）：悬浮窗替代 w-1/2 并排分栏。
+                  旧 half 分栏在窗口 <600px 时把正文压到每行几个字；
+                  悬浮窗保住正文 max-w-[860px] 阅读宽度，问答随时可呼出。
+                  方案选择理由：half 的本质是「边看边问」，悬浮窗两个需求都保得住；
+                  方案 A（窄屏自动降级）会让同一按钮在不同窗口宽度的行为不一致。 */}
               {showChat === 'half' && currentTask && (
-                <div className="ml-2 h-full w-1/2 shrink-0">
-                  <ChatPanel taskId={currentTask.id} mode="half" onModeChange={setShowChat} />
-                </div>
+                <ChatFloatingWindow
+                  taskId={currentTask.id}
+                  onExpand={() => setShowChat('full')}
+                  onClose={() => setShowChat(false)}
+                  onModeChange={setShowChat}
+                />
               )}
               </>
               )}

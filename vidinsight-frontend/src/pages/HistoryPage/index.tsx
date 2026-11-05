@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState, useMemo, useCallback } from 'react
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTaskStore } from '@/store/taskStore'
 import { fetchTaskList } from '@/services/note.ts'
-import { Clock, FileText, ArrowLeft, Search } from 'lucide-react'
+import { Clock, FileText, ArrowLeft, Search, ChevronLeft, PanelLeft } from 'lucide-react'
 import NoteHistory from '@/pages/HomePage/components/NoteHistory.tsx'
 import { ScrollArea } from '@/components/ui/scroll-area.tsx'
 import { Button } from '@/components/ui/button.tsx'
@@ -91,6 +91,41 @@ export default function HistoryPage() {
   // ===== 移动端：列表视图 vs 详情视图 =====
   const [showDetail, setShowDetail] = useState(false)
 
+  // ===== 桌面端列表收起（P0-1，2026-11-05） =====
+  // 旧版左侧列表恒占 lg:320/xl:360，窄屏下把右侧正文压到不可读。
+  // 现在桌面端可收起：列表宽度归零让正文撑满，按钮形态与 AppLayout
+  // 侧栏按钮一致（圆形悬浮，贴列表右边缘）；状态持久化到 localStorage。
+  const COLLAPSE_KEY = 'history-list-collapsed'
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= 1024,
+  )
+  const [isXl, setIsXl] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= 1280,
+  )
+  const [listCollapsed, setListCollapsed] = useState(() => {
+    try { return localStorage.getItem(COLLAPSE_KEY) === '1' } catch { return false }
+  })
+
+  useEffect(() => {
+    const check = () => {
+      setIsDesktop(window.innerWidth >= 1024)
+      setIsXl(window.innerWidth >= 1280)
+    }
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const toggleListCollapsed = useCallback(() => {
+    setListCollapsed(prev => {
+      const next = !prev
+      // 状态持久化：刷新/重开后保持用户的收起偏好
+      try { localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0') } catch { /* 存储不可用则仅内存态 */ }
+      return next
+    })
+  }, [])
+
+  const listWidth = isXl ? 360 : 320
+
   // 移动端点击任务后切到详情
   const handleMobileSelect = useCallback(
     (id: string) => {
@@ -128,12 +163,37 @@ export default function HistoryPage() {
   const selectedTask = sortedTasks.find(t => t.id === selectedId)
 
   return (
-    <div className="flex h-full flex-col bg-[var(--vi-bg)] lg:flex-row">
+    <div className="relative flex h-full flex-col bg-[var(--vi-bg)] lg:flex-row">
+      {/* ===== 桌面端列表收起按钮（P0-1）=====
+          圆形悬浮（h-8 w-8 rounded-full），贴列表右边缘，随收起动画同步移动；
+          与 AppLayout 侧栏按钮同形态——全局只允许一种展开按钮形状（P1-2）。 */}
+      {isDesktop && (
+        <button
+          onClick={toggleListCollapsed}
+          style={{ left: listCollapsed ? 8 : listWidth + 8 }}
+          className="absolute top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:bg-neutral-50"
+          title={listCollapsed ? '展开历史列表' : '收起历史列表'}
+          aria-label={listCollapsed ? '展开历史列表' : '收起历史列表'}
+        >
+          {listCollapsed ? (
+            <PanelLeft className="h-4 w-4 text-neutral-500" />
+          ) : (
+            <ChevronLeft className="h-4 w-4 text-neutral-500" />
+          )}
+        </button>
+      )}
+
       {/* ===== 左侧：历史列表 ===== */}
+      {/* 桌面端：宽度由 JS 控制（收起=0 且去边框），transition 平滑动画；
+          移动端：维持原有 showDetail 视图切换，不受收起影响 */}
       <aside
-        className={`flex shrink-0 flex-col border-r border-[var(--vi-hairline)] bg-[var(--vi-bg)] lg:w-[320px] xl:w-[360px] ${
-          showDetail ? 'hidden lg:flex' : 'flex'
-        } h-full`}
+        style={isDesktop ? {
+          width: listCollapsed ? 0 : listWidth,
+          borderRightWidth: listCollapsed ? 0 : 1,
+        } : undefined}
+        className={`flex shrink-0 flex-col overflow-hidden border-r border-[var(--vi-hairline)] bg-[var(--vi-bg)] transition-all duration-300 ${
+          isDesktop ? '' : `${showDetail ? 'hidden' : 'flex w-full'} h-full`
+        }`}
       >
         {/* 列表头部 */}
         <div className="shrink-0 border-b border-[var(--vi-hairline)] px-4 py-3">
@@ -162,9 +222,10 @@ export default function HistoryPage() {
       </aside>
 
       {/* ===== 右侧：笔记详情 ===== */}
+      {/* 列表收起后 flex-1 自动撑满全宽（P0-1 验收点：CDP 量 clientWidth） */}
       <main
         className={`flex flex-1 flex-col overflow-hidden ${
-          !showDetail ? 'hidden lg:flex' : 'flex'
+          isDesktop ? 'flex' : showDetail ? 'flex' : 'hidden'
         }`}
       >
         {/* 顶部导航 */}

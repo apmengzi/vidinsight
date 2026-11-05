@@ -192,3 +192,21 @@ body {
   --vi-code-bg: #232730;
 }
 html.dark body { background-color: var(--vi-bg); }
+
+/* ---------------------------------------------------------------------------
+ * Radix ScrollArea 内容宽度约束（2026-11-02）
+ *
+ * Radix 的 Viewport 内部会包一层 div，样式为
+ *   display: table; min-width: 100%;
+ * table 布局的宽度由内容决定，不是由容器决定。所以正文里的宽表格/大图会把
+ * 这一层撑到 828-1382px，而 Viewport 只有 580-1580px（随窗口和右侧目录栏变化），
+ * 超出的部分被 overflow:hidden 裁掉 —— 表现为「图片右侧被切」「只有最大化才正常」。
+ *
+ * 强制它跟随容器宽度（width:100% + min-width:0），宽度约束交给内层
+ * .markdown-body 的 max-width 管，溢出交给 table 自己的 overflow-x-auto。
+ * ------------------------------------------------------------------------- */
+[data-slot='scroll-area-viewport'] > div {
+  display: block !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}

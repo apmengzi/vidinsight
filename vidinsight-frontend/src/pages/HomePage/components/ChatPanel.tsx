@@ -16,6 +16,9 @@ interface ChatPanelProps {
   taskId: string
   mode: ChatMode
   onModeChange: (mode: ChatMode) => void
+  /** 悬浮窗模式（P0-2）：外壳 ChatFloatingWindow 已有标题栏，
+   *  面板隐藏自带 header 避免双标题栏；全屏/最小化/关闭都由外壳负责 */
+  hideHeader?: boolean
 }
 
 function SourceBadges({ sources }: { sources: ChatSource[] }) {
@@ -48,7 +51,7 @@ function SourceBadges({ sources }: { sources: ChatSource[] }) {
   )
 }
 
-export default function ChatPanel({ taskId, mode, onModeChange }: ChatPanelProps) {
+export default function ChatPanel({ taskId, mode, onModeChange, hideHeader }: ChatPanelProps) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null)
@@ -230,36 +233,38 @@ export default function ChatPanel({ taskId, mode, onModeChange }: ChatPanelProps
   }
 
   return (
-    <div className="flex h-full flex-col border-l">
-      {/* 头部 */}
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-medium">洞察问答</span>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-neutral-400 hover:text-neutral-600"
-            onClick={() => onModeChange(mode === 'half' ? 'full' : 'half')}
-            title={mode === 'half' ? '全屏' : '半屏'}
-          >
-            {mode === 'half' ? (
-              <Maximize2 className="h-3.5 w-3.5" />
-            ) : (
-              <Minimize2 className="h-3.5 w-3.5" />
-            )}
-          </Button>
-          {messages.length > 0 && (
+    <div className={'flex h-full flex-col ' + (hideHeader ? '' : 'border-l')}>
+      {/* 头部（悬浮窗模式下由外壳 ChatFloatingWindow 提供标题栏，这里隐藏） */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <span className="text-sm font-medium">洞察问答</span>
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-neutral-400 hover:text-red-500"
-              onClick={() => clearChat(taskId)}
+              className="h-7 px-2 text-neutral-400 hover:text-neutral-600"
+              onClick={() => onModeChange(mode === 'half' ? 'full' : 'half')}
+              title={mode === 'half' ? '全屏' : '半屏'}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              {mode === 'half' ? (
+                <Maximize2 className="h-3.5 w-3.5" />
+              ) : (
+                <Minimize2 className="h-3.5 w-3.5" />
+              )}
             </Button>
-          )}
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-neutral-400 hover:text-red-500"
+                onClick={() => clearChat(taskId)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 消息列表 */}
       <div className="flex-1 overflow-hidden">

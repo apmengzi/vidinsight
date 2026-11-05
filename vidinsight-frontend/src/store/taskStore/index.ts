@@ -66,6 +66,8 @@ export interface Task {
   /** 各阶段耗时明细 */
   stage_times?: Record<string, number>
   audioMeta: AudioMeta
+  /** 已归档原片的播放地址（/api/task_video/{task_id}），无归档视频时为空 */
+  videoUrl?: string
   createdAt: string
   formData: {
     video_url: string

@@ -207,30 +207,21 @@ export default function AppLayout() {
         </>
       )}
 
-      {/* ===== 顶部导航栏（移动端 + 桌面端侧栏收起时） ===== */}
-      {(isMobile || desktopCollapsed) && (
-        <div className="flex shrink-0 items-center gap-3 border-b border-neutral-200 bg-white px-3 py-2">
-          <button
-            onClick={() => (isMobile ? setMobileOpen(true) : setDesktopCollapsed(false))}
-            className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100"
-            title="展开侧边栏"
-          >
-            {isMobile ? <Menu className="h-5 w-5" /> : <PanelLeft className="h-5 w-5" />}
-          </button>
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="logo" className="h-7 w-7 rounded-lg" />
-            <span className="text-base font-bold text-neutral-800">VidInsight / 灵悉</span>
-          </div>
-        </div>
-      )}
-
-      {/* ===== 桌面端侧边栏切换按钮 ===== */}
+      {/* ===== 桌面端侧边栏切换按钮（唯一入口，圆形悬浮） =====
+          2026-11-05 修复三个问题：
+          1. 旧版收起时同时渲染「顶部横栏」+「悬浮按钮」两个展开入口，
+             位置还重叠 → 用户看到两个大长条，不知道该点哪个。
+          2. 顶部横栏占掉一整条高度，里面只有 logo + 展开键，视觉浪费。
+          3. 展开按钮的 left 值是硬编码 SIDEBAR_WIDTH，与动画不同步，
+             收起/展开过程中会飘。
+          现在统一成：一个圆形按钮，贴在侧栏右边缘，收起时移到 left:0。 */}
       {!isMobile && (
         <button
           onClick={() => setDesktopCollapsed(!desktopCollapsed)}
-          style={{ left: desktopCollapsed ? 0 : SIDEBAR_WIDTH }}
-          className="absolute top-3 z-10 rounded-r-lg border border-l-0 border-neutral-200 bg-white p-1.5 shadow-sm transition-all hover:bg-neutral-50"
+          style={{ left: desktopCollapsed ? 8 : SIDEBAR_WIDTH + 8 }}
+          className="absolute top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:bg-neutral-50"
           title={desktopCollapsed ? '展开侧边栏' : '收起侧边栏'}
+          aria-label={desktopCollapsed ? '展开侧边栏' : '收起侧边栏'}
         >
           {desktopCollapsed ? (
             <PanelLeft className="h-4 w-4 text-neutral-500" />
@@ -240,9 +231,25 @@ export default function AppLayout() {
         </button>
       )}
 
+      {/* ===== 移动端顶部栏（只在移动端出现） ===== */}
+      {isMobile && (
+        <div className="flex shrink-0 items-center gap-3 border-b border-neutral-200 bg-white px-3 py-2">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100"
+            title="展开侧边栏"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="logo" className="h-7 w-7 rounded-lg" />
+            <span className="text-base font-bold text-neutral-800">VidInsight / 灵悉</span>
+          </div>
+        </div>
+      )}
+
       {/* ===== 主内容区域 ===== */}
       <main className="flex flex-1 flex-col overflow-hidden">
-        {!isMobile && desktopCollapsed && <div className="h-10 shrink-0" />}
         <div className="flex-1 overflow-hidden">
           <Outlet />
         </div>
