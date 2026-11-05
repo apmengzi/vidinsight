@@ -295,6 +295,56 @@ class XiaoHongShuDownloader(Downloader):
             video_path=mp4_path,
         )
 
+    def download_video(self, video_url: str,
+                       output_dir: Union[str, None] = None) -> str:
+        """下载小红书视频文件（关键帧抽取需要）。
+
+        基类默认实现是 `pass`（返回 None），导致关键帧功能在小红书上
+        直接崩在 `Path(None)`（实测报错 "cannot access local variable
+        'video_path_str'"）。
+
+        三级降级：
+          1. 直接解析笔记 API 拿 CDN 直链（最快，但 xsec_token 有时效）
+          2. hellotik.app/zh/rednote 兜底（token 失效时的唯一出路）
+          3. 都失败 → 抛明确错误
+        """
+        output_dir = output_dir or self.cache_data or "data"
+        os.makedirs(output_dir, exist_ok=True)
+
+        url = self._resolve_url(video_url)
+        note_id = self._extract_note_id(url) or "xhs_unknown"
+        mp4_path = os.path.join(output_dir, f"{note_id}.mp4")
+        if os.path.exists(mp4_path) and os.path.getsize(mp4_path) > 3000:
+            return mp4_path
+
+        # ① 走笔记 API 拿直链（token 有效时最快）
+        try:
+            note = self._get_note(url, note_id)
+            video_url_media = self._extract_video_url(note)
+            if video_url_media:
+                logger.info(f"小红书直链下载（关键帧）: {note_id}")
+                size = self._download_file(video_url_media, mp4_path)
+                if size > 3000:
+                    return mp4_path
+        except Exception as e:
+            logger.warning(f"小红书直链失败，改用 hellotik 兜底: {str(e)[:80]}")
+
+        # ② hellotik 兜底（xsec_token 过期时的出路）
+        logger.info("小红书走 hellotik 兜底解析")
+        from app.services.hellotik_local import parse_direct_url
+        hk = parse_direct_url(url, platform="xiaohongshu")
+        if not hk.get("success"):
+            raise Exception(
+                f"小红书视频下载失败：直链解析和 hellotik 兜底都没成功"
+                f"（{hk.get('reason') or '未知原因'}）"
+            )
+        direct = hk["video_url"]
+        size = self._download_file(direct, mp4_path)
+        if size < 3000:
+            raise Exception(f"小红书视频下载失败（hellotik 直链 {size} bytes）")
+        logger.info(f"hellotik 小红书下载成功: {mp4_path}")
+        return mp4_path
+
     def download_subtitles(self, video_url: str, output_dir: str = None,
                            langs: list = None) -> Optional[TranscriptResult]:
         """图文笔记：把「正文 + 图片序号」合成为转写材料，让管线跳过音频下载。

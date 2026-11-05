@@ -262,12 +262,19 @@ class BilibiliDownloader(Downloader, ABC):
         output_path = os.path.join(output_dir, "%(id)s.%(ext)s")
 
         ydl_opts = {
-            'format': 'bv*[ext=mp4]/bestvideo+bestaudio/best',
+            # 关键帧/截图分析时图像都会缩到 ≤1080，拉 4K 纯属浪费带宽：
+            # 实测 4K AV1 一部 20min 视频 200-400MB，B站 CDN 限速时 350KB/s
+            # 要下 15 分钟；1080p 只有约 1/4 大小。先选 ≤1080，实在没有再退化全量
+            'format': 'bv*[ext=mp4][height<=1080]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/bv*[ext=mp4]/bestvideo+bestaudio/best',
             'outtmpl': output_path,
             'http_headers': {'Referer': 'https://www.bilibili.com'},
             'noplaylist': True,
             'quiet': False,
             'merge_output_format': 'mp4',  # 确保合并成 mp4
+            # B站 DASH 是单文件大流：设 chunk 才能配合并发分段并行拉取，
+            # 实测单连接被 CDN 压到 ~350KB/s，分块并发能吃满带宽
+            'http_chunk_size': 10 * 1024 * 1024,
+            'concurrent_fragment_downloads': 8,
         }
         # 视频是 DASH 多分段（视频轨 + 音频轨），并发分段在这里才真正生效
         apply_download_opts(ydl_opts)

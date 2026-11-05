@@ -27,12 +27,24 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 HELLOTIK_PAGE = "https://www.hellotik.app/zh"
+# 平台专属入口：hellotik 按平台分了不同页面，粘贴框在各自页面上
+HELLOTIK_PAGES = {
+    "bilibili": "https://www.hellotik.app/zh",
+    "xiaohongshu": "https://www.hellotik.app/zh/rednote",
+}
 RESP_CBC_KEY = b"93838338562359368888868323563256"
 _CUSTOM = "ZYXABCDEFGHIJKLMNOPQRSTUVWzyxabcdefghijklmnopqrstuvw9876543210-_"
 _STD = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 _B64_TABLE = str.maketrans(_CUSTOM, _STD)
 
 CDN_ALLOW = ("bilivideo.com", "hdslb.com", "biliapi.com", "akamaized.net")
+# 小红书视频 CDN（实测走 sns-video-qc.xhscdn.com / xhscdn.com）
+CDN_ALLOW_XHS = ("xhscdn.com", "xiaohongshu.com")
+# 按平台合并允许的 CDN 域
+CDN_ALLOW_BY_PLATFORM = {
+    "bilibili": CDN_ALLOW,
+    "xiaohongshu": CDN_ALLOW_XHS,
+}
 
 # 真实浏览器指纹（headless 也能过 gate 的关键）
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -76,9 +88,10 @@ def _decrypt(resp: dict) -> dict:
         }
 
 
-def parse_direct_url(video_url: str, timeout_s: float = 60.0) -> dict:
-    """B 站链接 → hellotik 无水印直链（本地 headless Chromium）。
+def parse_direct_url(video_url: str, timeout_s: float = 60.0, platform: str = "bilibili") -> dict:
+    """视频链接 → hellotik 无水印直链（本地 headless Chromium）。
 
+    platform: "bilibili"（默认）或 "xiaohongshu"（走 /zh/rednote 页）。
     返回 {"success": bool, "video_url", "title", "cover", "reason"}。
     直链带签名有时效，调用方必须立即下载。
     """
@@ -86,6 +99,9 @@ def parse_direct_url(video_url: str, timeout_s: float = 60.0) -> dict:
         from playwright.sync_api import sync_playwright
     except Exception:
         return {"success": False, "reason": "playwright_missing"}
+
+    page_url = HELLOTIK_PAGES.get(platform, HELLOTIK_PAGE)
+    cdn_allow = CDN_ALLOW_BY_PLATFORM.get(platform, CDN_ALLOW)
 
     try:
         with sync_playwright() as pw:
@@ -111,7 +127,7 @@ def parse_direct_url(video_url: str, timeout_s: float = 60.0) -> dict:
 
             page.on("response", _on_resp)
             try:
-                page.goto(HELLOTIK_PAGE, wait_until="domcontentloaded", timeout=45000)
+                page.goto(page_url, wait_until="domcontentloaded", timeout=45000)
                 page.wait_for_timeout(4000)
 
                 fill = page.evaluate(
@@ -144,7 +160,7 @@ def parse_direct_url(video_url: str, timeout_s: float = 60.0) -> dict:
 
                 data = _decrypt(resp.json())
                 direct = (data.get("url") or "").strip()
-                if not direct or not any(d in direct for d in CDN_ALLOW):
+                if not direct or not any(d in direct for d in cdn_allow):
                     return {"success": False, "reason": "no_cdn_url"}
 
                 title = (data.get("title") or "").split("|||")[0].strip()
@@ -154,7 +170,7 @@ def parse_direct_url(video_url: str, timeout_s: float = 60.0) -> dict:
                     "video_url": direct,
                     "title": title,
                     "cover": data.get("cover") or "",
-                    "platform": "bilibili",
+                    "platform": platform,
                 }
             finally:
                 try:

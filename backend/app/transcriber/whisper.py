@@ -46,11 +46,17 @@ def _venv_nvidia_bin_dirs() -> list[str]:
     - venv 源码运行：<venv>/Lib/site-packages/nvidia/*/bin
     - PyInstaller 打包：nvidia DLL 经 build.bat --add-data 收进 _internal/nvidia/*/bin
       （frozen 下 sys.prefix 即 _internal），布局为 <sys.prefix>/nvidia/*/bin
+    第三种：用 Anaconda 等外部解释器直跑源码时，nvidia wheel 实际装在
+    仓库根 .venv 里——按当前文件位置回溯仓库根补候选。
     """
     candidates = [
         Path(sys.prefix) / "Lib" / "site-packages" / "nvidia",
         Path(sys.prefix) / "nvidia",
     ]
+    # 仓库根 .venv（外部解释器直跑源码时的真实安装位置）
+    repo_venv = Path(__file__).resolve().parents[3] / ".venv"
+    candidates.append(repo_venv / "Lib" / "site-packages" / "nvidia")
+    candidates.append(repo_venv / "nvidia")
     # PyInstaller frozen：_MEIPASS 指向 _internal，是 add-data 数据的可靠落点
     if hasattr(sys, "_MEIPASS"):
         candidates.append(Path(sys._MEIPASS) / "nvidia")
@@ -78,6 +84,13 @@ def _register_nvidia_dll_dirs() -> None:
 
 
 def _find_windows_dll(name: str) -> str | None:
+    # ① venv 里的 nvidia wheel 目录优先（最可靠；shutil.which 不认 .dll，
+    #    PATH 上的 CUDA 目录会漏，见 _venv_nvidia_bin_dirs 尾注）
+    for bin_dir in _venv_nvidia_bin_dirs():
+        candidate = Path(bin_dir) / name
+        if candidate.exists():
+            return str(candidate)
+
     found = shutil.which(name)
     if found:
         return found

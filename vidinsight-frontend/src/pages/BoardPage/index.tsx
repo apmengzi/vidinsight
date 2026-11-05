@@ -56,6 +56,9 @@ export default function BoardPage() {
   const [board, setBoard] = useState<{ boardId: string; name: string; total: number } | null>(null)
   const [notes, setNotes] = useState<BoardNote[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // 封面加载失败的 note_id：小红书 CDN 是带时效的签名 URL，过期后 403。
+  // 本地 cover_local 缺失时 img 会裂成破图，这里降级为占位图标。
+  const [brokenCovers, setBrokenCovers] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
 
   // ── 多专辑支持（2026-10-17 用户需求）──
@@ -238,8 +241,13 @@ export default function BoardPage() {
 
   const handleCapture = useCallback(async () => {
     if (!board) return
-    const ok = await verifyLoginStatus({ silent: false })
-    if (!ok) return
+    // 登录态校验只做提示，不再阻断开窗（2026-11-03 用户反馈）：
+    // 「继续捕获更多」在登录过期时点不动，而窗口本身就是重新登录的入口。
+    // 校验失败 → 提示但继续打开，用户可在窗口里登录后继续翻收藏。
+    const ok = await verifyLoginStatus({ silent: true })
+    if (!ok) {
+      toast.info('登录态可能已过期，窗口打开后请先登录再翻收藏', { duration: 6000 })
+    }
     try {
       await openBoardCaptureWindow(`https://www.xiaohongshu.com/board/${board.boardId}`)
       setPhase('capturing')
@@ -287,8 +295,11 @@ export default function BoardPage() {
   // 全程后台完成，用户不用盯着窗口（窗口会自动跑完全流程）。
   const handleRefreshCapture = useCallback(async () => {
     if (!board) return
-    const ok = await verifyLoginStatus({ silent: false })
-    if (!ok) return
+    // 同 handleCapture：登录校验只提示不阻断，窗口本身是重新登录入口
+    const ok = await verifyLoginStatus({ silent: true })
+    if (!ok) {
+      toast.info('登录态可能已过期，窗口打开后请先登录', { duration: 6000 })
+    }
     try {
       await openBoardCaptureWindow(`https://www.xiaohongshu.com/board/${board.boardId}`)
       setPhase('capturing')
@@ -339,6 +350,9 @@ export default function BoardPage() {
             format: ['link', 'summary'],
             extras: '',
             video_understand: false,
+            // 批量生成默认不开关键帧：十几条一起跑，每条多 3-5 倍会等到崩溃。
+            // 需要的话单独开单条任务，或事后补做。
+            keyframe_extract: false,
             grid_size: [3, 3],
           })
           const taskId: string = data?.task_id || ''
@@ -645,19 +659,23 @@ export default function BoardPage() {
                         >
                           {/* 3:4 竖图封面（小红书封面原生比例，禁止改 16:9） */}
                           <div className="relative aspect-[3/4] w-full overflow-hidden bg-[var(--vi-hover)]">
-                            {resolveCoverUrl(n) ? (
+                            {resolveCoverUrl(n) && !brokenCovers.has(n.note_id) ? (
                               <img
                                 src={resolveCoverUrl(n)}
                                 alt={n.title}
                                 loading="lazy"
+                                onError={() =>
+                                  setBrokenCovers(prev => new Set(prev).add(n.note_id))
+                                }
                                 className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.02]"
                               />
                             ) : (
                               <div
-                                className="flex h-full w-full items-center justify-center text-[var(--vi-ink-3)]"
+                                className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-[var(--vi-ink-3)]"
                                 style={DOT_GRID}
                               >
                                 <Bookmark className="h-7 w-7 opacity-60" />
+                                <span className="text-[10px] opacity-70">封面已过期</span>
                               </div>
                             )}
                             {/* 右上角勾选圆环：未选幽灵磨砂 / 选中实心黑键白勾 */}

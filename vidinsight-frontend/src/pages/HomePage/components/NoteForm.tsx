@@ -55,6 +55,12 @@ const formSchema = z
     style: z.string().nonempty('请选择分析模板'),
     extras: z.string().optional(),
     video_understanding: z.boolean().optional(),
+    // 关键画面抽取：截图视频里的参数表/清单/原理图并转成表格写进笔记。
+    // 默认关闭（2026-11-03 用户要求）：该功能会让任务慢 3-5 倍（视觉分析是大头），
+    // 不需要画面的视频不该为它买单。需要时手动勾选，或事后在历史页补做。
+    keyframe_extract: z.boolean().default(false).optional(),
+    // 归档原片到本地，供笔记页离线回看（会让任务多下载完整视频）
+    archive_video: z.boolean().default(false).optional(),
     video_interval: z.coerce.number().min(1).max(30).default(6).optional(),
     grid_size: z
       .tuple([z.coerce.number().min(1).max(10), z.coerce.number().min(1).max(10)])
@@ -150,6 +156,8 @@ const NoteForm = () => {
       model_name: modelList[0]?.model_name || '',
       style: 'adaptive',
       video_interval: 6,
+      keyframe_extract: false,
+      archive_video: false,
       grid_size: [2, 2],
       format: [],
     },
@@ -160,6 +168,15 @@ const NoteForm = () => {
   const platform = useWatch({ control: form.control, name: 'platform' }) as string
   const videoUrl = useWatch({ control: form.control, name: 'video_url' }) as string | undefined
   const videoUnderstandingEnabled = useWatch({ control: form.control, name: 'video_understanding' })
+  const keyframeExtractEnabled = useWatch({ control: form.control, name: 'keyframe_extract' })
+  const archiveVideoEnabled = useWatch({ control: form.control, name: 'archive_video' })
+  const selectedModelName = useWatch({ control: form.control, name: 'model_name' }) as string | undefined
+  // 当前选中的模型是否支持读图（决定关键画面开关能否勾选）
+  const selectedModelCaps = (modelList.find(m => m.model_name === selectedModelName) as any)
+    ?.capabilities as Record<string, any> | undefined
+  const canReadImage = !!selectedModelCaps?.inputFormat?.supportsImage
+    // 兼容老数据 {"image": true}
+    || !!selectedModelCaps?.image
   const editing = currentTask && currentTask.id
 
   /* ---- 链接预览（纯 UX 增强，绝不阻塞生成主流程）----
@@ -305,6 +322,8 @@ const NoteForm = () => {
       screenshot: formData.screenshot ?? false,
       link: formData.link ?? false,
       video_understanding: formData.video_understanding ?? false,
+      keyframe_extract: formData.keyframe_extract ?? false,
+      archive_video: formData.archive_video ?? false,
       video_interval: formData.video_interval ?? 6,
       grid_size: formData.grid_size ?? [2, 2],
       format: formData.format ?? [],
@@ -687,6 +706,73 @@ const NoteForm = () => {
               )}
             />
           </div>
+          {/* 关键画面抽取：只存在于画面里的信息（参数对比表/食材清单/原理图/
+              描点站位）音频和字幕念不出来，靠这个开关截图 + 转表格写进笔记。
+              默认关闭——视觉分析会让任务慢 3-5 倍，不需要画面的视频不必买单。 */}
+          <SectionHeader
+            title="关键画面抽取"
+            tip="截取视频里的参数表、清单、原理图、描点站位并转成表格写进笔记。会让任务慢 3-5 倍，按需开启"
+          />
+          <div className="flex flex-col gap-2">
+            <FormField
+              control={form.control}
+              name="keyframe_extract"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center gap-2">
+                    <FormLabel className={canReadImage ? '' : 'text-neutral-400'}>
+                      启用
+                    </FormLabel>
+                    <Checkbox
+                      checked={canReadImage && keyframeExtractEnabled}
+                      disabled={!canReadImage}
+                      onCheckedChange={v => form.setValue('keyframe_extract', v === true)}
+                    />
+                    {!canReadImage && (
+                      <span className="text-xs text-neutral-400">
+                        当前模型不支持读图，请先在「全局配置 → 模型」里勾选「图片」
+                      </span>
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {canReadImage && (
+              <p className="text-xs text-neutral-500">
+                开启后任务耗时约增加 3-5 倍（逐帧视觉分析）。已经生成的笔记可在「分析历史」里补做。
+              </p>
+            )}
+          </div>
+
+          {/* 离线回看：把原片归档到本地，笔记页可直接播放 */}
+          <SectionHeader
+            title="保存原片"
+            tip="把下载的视频归档到本地，笔记页可直接播放，断网也能看"
+          />
+          <div className="flex flex-col gap-2">
+            <FormField
+              control={form.control}
+              name="archive_video"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center gap-2">
+                    <FormLabel>启用</FormLabel>
+                    <Checkbox
+                      checked={archiveVideoEnabled}
+                      onCheckedChange={v => form.setValue('archive_video', v === true)}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <p className="text-xs text-neutral-500">
+              开启后会多下载一次完整视频（十几分钟的视频约 80-150MB）。
+              适合要反复回看、或需要在无网络环境（飞机/地铁）学习的视频。
+            </p>
+          </div>
+
           {/* 视频理解 */}
           <SectionHeader title="视频理解" tip="将视频截图发给多模态模型辅助分析" />
           <div className="flex flex-col gap-2">

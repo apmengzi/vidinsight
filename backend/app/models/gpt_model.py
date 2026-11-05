@@ -16,4 +16,5 @@ class GPTSource:
     _format: Optional[list] = None
     video_img_urls:  Optional[list] = None
     checkpoint_key: Optional[str] = None
+    on_progress: Optional[object] = None
 
