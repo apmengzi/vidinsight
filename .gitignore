@@ -58,3 +58,23 @@ NUL
 backend/config/image_gen.json
 # 一图流生成产物（提炼缓存 + 渲染图）
 backend/static/one_pagers/
+
+# 个人面试资料与工作日志（不入公开仓库）
+面试*.md
+面试*.pdf
+速答卡片.md
+Spiro公开情报.md
+*进度.md
+accept_shots/
+# 运行产物与调试残留
+backend/vidinsight.db
+backend/*.mp3
+backend/*.mp4
+backend/grid_output/
+backend/output_frames/
+backend/static/frames_*/
+build*.log
+.tmp/
+.tmp_research/
+nul
+cdp_tools/*.png

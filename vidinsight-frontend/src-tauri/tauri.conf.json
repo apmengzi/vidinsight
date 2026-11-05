@@ -18,7 +18,7 @@
         "resizable": true,
         "fullscreen": false,
         "devtools": false,
-        "additionalBrowserArgs": "--proxy-server=direct:// --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
+        "additionalBrowserArgs": "--proxy-server=direct:// --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9333"
       }
     ],
     "security": {

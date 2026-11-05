@@ -2,6 +2,25 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
+---
+
+## 🚨 新会话开工前必读
+
+**第一步：读 `HANDOFF.md`**（会话交接文档），然后**复述你理解的任务和进度，等用户确认再动手**。
+
+里面有三个会直接毁掉工作的陷阱：
+1. **工作区 `new_cyber_stomach_project` 不是本项目** —— 本项目在 `D:\CyberStomach\VidInsight`，是两个不同的 git 仓库
+2. **`cargo build` 会做出坏桌面端** —— 必须用 `pnpm tauri build`，并对比 exe/dist 的 chunk 名
+3. **启动桌面端会抢焦点** —— 用 `-WindowStyle Minimized`，用户明确禁止弹窗打断
+
+还有 **「已否决的方案」清单**（8 条），照着做会重蹈覆辙，先读再动手。
+
+**第二步：读 `TASKS.md`**（待办池），了解全局待办，完成任务后回来改状态。
+
+会话结束前，把新进展写回 `HANDOFF.md` 和 `TASKS.md`，别让下一个会话重新摸索。
+
+---
+
 ## Project Overview
 
 VidInsight is an AI video note generation tool. It extracts content from video links (Bilibili, YouTube, Douyin, Kuaishou, local files) and generates structured Markdown notes using LLM models. Full-stack app with a FastAPI backend, React frontend, and optional Tauri desktop packaging.

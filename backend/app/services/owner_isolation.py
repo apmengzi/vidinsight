@@ -32,6 +32,17 @@ OWNER_HEADER = "x-vidinsight-owner"
 LEGACY_OWNER = "legacy"
 _OWNER_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 
+
+def _isolation_enabled() -> bool:
+    """本地/桌面单人场景可设 OWNER_ISOLATION=0 关闭隔离，所有任务全员可见。
+
+    为什么需要：桌面端 owner 是 localStorage 里的随机 UUID，而用 curl/脚本/
+    其他客户端提交的任务不带该 header，一律归到 legacy —— 用户在桌面端
+    历史里就看不到这些笔记（2026-11-02 实测：15 个批量任务和标杆笔记全部
+    不可见）。默认仍开启，公开部署行为不变。
+    """
+    return os.getenv("OWNER_ISOLATION", "1").strip().lower() not in ("0", "false", "off", "no")
+
 # owner 索引文件：task_id -> owner。放 note_results 旁边，随产物目录一起持久化。
 _INDEX_NAME = "_owners.json"
 _lock = threading.Lock()
@@ -93,6 +104,8 @@ def get_owner(results_dir: str, task_id: str) -> str:
 
 def filter_tasks_by_owner(results_dir: str, task_ids: list[str], owner: str) -> set[str]:
     """返回该 owner 可见的 task_id 集合。"""
+    if not _isolation_enabled():
+        return set(task_ids)
     with _lock:
         data = _load_index(results_dir)
     visible = set()
@@ -104,4 +117,6 @@ def filter_tasks_by_owner(results_dir: str, task_ids: list[str], owner: str) -> 
 
 def can_access(results_dir: str, task_id: str, owner: str) -> bool:
     """单个任务是否可被该 owner 访问。"""
+    if not _isolation_enabled():
+        return True
     return get_owner(results_dir, task_id) == owner
