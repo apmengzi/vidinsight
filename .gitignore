@@ -82,3 +82,7 @@ cdp_tools/*.png
 .v2c/
 .video_agent/
 doc/_gpu_smi.log
+
+# miku 渠道凭据与设备id（不进仓库）
+backend/config/miku.json
+backend/config/miku_device_id.txt

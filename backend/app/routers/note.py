@@ -1465,16 +1465,30 @@ def _post_image_generation(prompt: str, size: str = "1024x1024") -> dict:
     return {"url": url, "remaining": j.get("remaining_today")}
 
 
-def _download_to(url: str, dest: str) -> str:
+def _download_to(url: str, dest: str, bypass_proxy: bool = False) -> str:
     import requests
 
-    with requests.get(url, timeout=120, stream=True) as r:
-        r.raise_for_status()
-        os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
-        with open(dest, "wb") as f:
-            for chunk in r.iter_content(256 * 1024):
-                if chunk:
-                    f.write(chunk)
+    kw = {"timeout": 120, "stream": True}
+    # miku 的签名直链经本机 7895 中转链会被 10054 掐断。实测 proxies={None} 会被
+    # requests 2.32 的 resolve_proxies 用 env 代理回填，必须 trust_env=False 才真直连。
+    sess = requests.Session()
+    if bypass_proxy:
+        sess.trust_env = False
+    for attempt in range(3):  # GET 幂等：对瞬时连接重置退避重试
+        try:
+            with sess.get(url, **kw) as r:
+                r.raise_for_status()
+                os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+                with open(dest, "wb") as f:
+                    for chunk in r.iter_content(256 * 1024):
+                        if chunk:
+                            f.write(chunk)
+            return dest
+        except requests.ConnectionError:
+            if attempt == 2:
+                raise
+            import time as _t
+            _t.sleep(1.5 * (attempt + 1))
     return dest
 
 
@@ -1567,25 +1581,52 @@ def build_one_pager_image(data: OnePagerImageRequest):
             points=points_text,
         )
 
-        # ③ 调文生图（该渠道只支持 1024x1024，竖版靠 PIL 补画布）
-        gen = _post_image_generation(prompt)
+        # ③ 文生图渠道选择（2026-11-10，用户定案：灵栈优先、用完再 miku）：
+        #   首选灵栈（免费额度，只支持 1024×1024，竖版靠 PIL 补画布）；
+        #   灵栈用尽/失败 → 回退 Miku AI（app/services/miku_image.py，
+        #   最省积分模型 0.15/张，可直出 4:5 竖版 1232×1536）。
+        channel, gen = "", None
+        try:
+            gen = _post_image_generation(prompt)
+            channel = "lingzhan"
+        except Exception as e:
+            logger.warning(f"[one_pager_image] 灵栈渠道失败，回退 miku: {str(e)[:200]}")
+            gen = None
+        if gen is None:
+            try:
+                from app.services.miku_image import generate as miku_generate, is_configured as miku_configured
+                if miku_configured():
+                    gen = miku_generate(prompt)
+                    channel = "miku"
+            except Exception as e:
+                logger.warning(f"[one_pager_image] miku 渠道也失败: {str(e)[:200]}")
+        if gen is None:
+            return R.error(msg="文生图渠道均不可用（灵栈额度用尽且 miku 失败）",
+                           err="ONE_PAGER_IMAGE_FAILED")
+
         name = f"onepager_ai_{int(time.time())}_{uuid.uuid4().hex[:6]}.png"
         dest = os.path.join(out_dir, name)
-        tmp_raw = dest + ".raw.png"
-        _download_to(gen["url"], tmp_raw)
-        _pad_to_portrait(tmp_raw, dest)
-        try:
-            if os.path.exists(tmp_raw) and tmp_raw != dest:
-                os.remove(tmp_raw)
-        except Exception:
-            pass
+        if channel == "miku":
+            _download_to(gen["url"], dest, bypass_proxy=True)  # 已是竖版比例，无需补边
+        else:
+            tmp_raw = dest + ".raw.png"
+            _download_to(gen["url"], tmp_raw)
+            _pad_to_portrait(tmp_raw, dest)
+            try:
+                if os.path.exists(tmp_raw) and tmp_raw != dest:
+                    os.remove(tmp_raw)
+            except Exception:
+                pass
 
-        logger.info(f"[one_pager_image] 生成完成: {name} (remaining={gen.get('remaining')})")
+        logger.info(f"[one_pager_image] 生成完成: {name} channel={channel} "
+                    f"cost={gen.get('cost')} remaining={gen.get('remaining')}")
         return R.success(data={
             "url": f"/static/one_pagers/{name}",
             "mode": "ai",
+            "channel": channel,
             "points": len(pts),
             "remaining_today": gen.get("remaining"),
+            "cost": gen.get("cost"),
             "source_url": gen["url"],
         })
     except Exception as e:
